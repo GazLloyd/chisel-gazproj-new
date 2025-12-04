@@ -1,0 +1,164 @@
+// compile with `lessc styles/styles.less styles/styles.css
+// (install with `npm i lessc -g`)
+body {
+    background: #071022;
+    color: #f9f9f9;
+}
+body,table {
+    
+    font-family: 'IBM Plex Sans','Helvetica Neue','Arial',sans-serif;
+    font-size: 0.9em;
+}
+
+
+.code {
+    font-family: monospace;
+    background-color: #313e59;
+    border-color: #172136;
+}
+
+a {
+    color: #8cabe6;
+}
+
+.buttonlink {
+    color: #fff;
+    background-color: #36c;
+    margin: 2px;
+    border: 2px outset #36c;
+    border-radius: 3px;
+    padding-left: 5px;
+    padding-right: 5px;
+    text-decoration: none;
+    cursor: poiner;
+	&:hover {
+    	border-style: inset;
+	}
+}
+
+button, .button {
+    color: #fff;
+    background-color: #36c;
+    border-color: #36c;
+}
+button:hover, .button:hover {
+    color: #cbd9f4;
+    background-color: #384766;
+    border-color: #475980;
+}
+button,input {
+    border-radius: 2px;
+}
+
+textarea {
+    background-color: #384766;
+    color: white;
+}
+textarea.config {
+    height: 80em;
+    width: 40em;
+}
+input[type="text"] {
+    width: 350px;
+    color: #cbd9f4;
+    background-color: #384766;
+    border-color: #475980;
+}
+
+
+table, th, td {
+	border: #172136 1px solid;
+    border-collapse : collapse;
+}
+
+table {
+	td {
+		background: #222e45;
+		padding: 3px;
+	}
+	th {
+		background: #313e59;
+		border-bottom-width: 2px;
+	}
+	> :not(tfoot) tr:first-child th,
+ 	> :not(tfoot) tr:nth-child(2) th,
+	tr th {
+		position:-webkit-sticky;
+		position:sticky;
+		height:2.3em;
+		box-sizing:border-box;
+		top:-1px;
+
+		&::after {
+			content:'';
+			position:absolute;
+			left:0;
+			bottom:-1px;
+			width:100%;
+		}
+	}
+	> :not(tfoot) tr:nth-child(2) th {
+		top:calc(2.3em + 1px)
+	}
+}
+
+@keyframes rswezcopyclick {
+    from {background: white; border-color:white;}
+    20% {background:green; border-color:darkgreen;}
+    to {}
+}
+.copy-config {
+    padding: 0.5em;
+}
+.copy-config.copied {
+    animation-name: rswezcopyclick;
+    animation-duration: 1s;
+    animation-timing-function:linear;
+    animation-iteration-count: 1;
+}
+
+.header {
+    display:flex;
+    width:100%;
+    font-weight: bold;
+    margin-bottom: 0.5em;
+}
+
+.header .item-name {
+    flex-grow: 100;
+    text-align: center;
+}
+
+.header .next-link {
+    text-align: right;
+}
+
+.mrdb-detail-dii img {
+    max-width: 500px;
+	&:hover {
+    	background-color:#bbbbbb;
+	}
+}
+
+.modelth, .modeltd {
+    display: none;
+}
+.showmodel {
+	.modelth, .modeltd {
+    	display: table-cell;
+	}
+}
+
+.mrdb-cell-combat {
+    text-align: right;
+}
+
+.hidenoted .noted {
+    display: none;
+}
+table tr.mrdb-row.hilite td {
+    background-color: #0e181e;
+}
+table tr.mrdb-row:hover td {
+    background-color: #4c565b;
+}

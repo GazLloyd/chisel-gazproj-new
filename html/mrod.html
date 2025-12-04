@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>MROD - minimal runescape3 object database</title>
+		<link rel='stylesheet' href='/gazproj/styles.css'>
+		<script>
+		window.dbtype = 'locations';
+		window.rowDef = [
+			{name:'id', format:(data)=>e('a', {text:data.id, attr:{href:'?q='+Math.max(0,data.id-15)+'-'+(data.id+15)+'&h='+data.id}})},
+			'name',
+			{name:'detail', class:'mrdb-wiki', format:(data)=>e('href', {text:'detail', class:'buttonlink', attr:{target:'_new', href:'./detail?id='+data.id}})},
+			'members',
+			'examine',
+			'actions',
+			'members_actions',
+			{name:'morphs_1', format:(data)=>data.morphs_1.ids.join(', ')},
+			{name:'morphs_2', format:(data)=>data.morphs_2.ids.join(', ')},
+			{name:'map', format:(data)=>[
+				e('e', {text:'3d', attr:{href:'https://map.gazlloyd.com/?objectid='+data.id, target:'_new'}}),
+				'&nbsp;&bull;&nbsp;',
+				e('e', {text:'2d', attr:{href:'https://mejrs.github.io/?objectid='+data.id, target:'_new'}})
+			]},
+			{name:'links', class:'mrdb-wiki', format:(data)=>[
+				e('a', {text:'p', class:'buttonlink', attr:{href:geturl('https://runescape.wiki/',{title:data.name}), title:'go to this pagename', target:'_new'}}),
+				e('a', {text:'s', class:'buttonlink', attr:{href:geturl('https://runescape.wiki/w/Special:Search',{search:data.name}), title:'search for this pagename', target:'_new'}}),
+				e('a', {text:'l', class:'buttonlink', attr:{href:geturl('https://runescape.wiki/w/Special:Lookup',{type:'item',id:data.id,name:data.name}), title:'lookup this id', target:'_new'}}),
+				e('a', {text:'i', class:'buttonlink', attr:{href:geturl('https://runescape.wiki/w/Special:Bucket',{bucket:'item_id',select:'*',where:`{"id",${data.id}}`}), title:'search for this id', target:'_new'}})
+			]}
+		];
+		</script>
+		<script src="mrid.js"></script>
+	</head>
+	<body>
+		<p>You can search for RS3 scenery (aka locations aka objects) names here - search is case insensitive (eg <span
+	class="code">portal</span>). You can also use regular expressions by surrounding the search in // (e.g. <span class="code">/whip/</span>). You can also search by item ID here - you can search single IDs (<span class="code">4151</span>), ranges (<span class="code">4751-4851</span>), and offsets (<span class="code">4751+100</span>), as well as recents (<span class="code">recent50</span>). See also <a href="https://oldschool.runescape.wiki/w/User:Riblet15/Regex">riblet's regex guide</a>.</p>
+		<div id="mridform">
+			<label for="q">Search: </label><input type="text" id="q" name="q" /><button id="go">go</button><br>
+			<button id="clear">clear results</button>
+		</div>
+		<div id="current">Currently showing: <span id="currentlist"></span></div>
+		<table>
+			<thead>
+				<tr>
+					<th>id</th>
+					<th>name</th>
+					<th>detail</th>
+					<th>members</th>
+					<th>examine</th>
+					<th>actions</th>
+					<th>actions_members</th>
+					<th>morphs_1</th>
+					<th>morphs_2</th>
+					<th>map</th>
+					<th>wiki</th>
+				</tr>
+			</thead>
+			<tbody id="mridbody"></tbody>
+		</table>
+	</body>
+</html>

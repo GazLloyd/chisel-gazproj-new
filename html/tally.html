@@ -1,0 +1,131 @@
+<html>
+	<head>
+		<title>simple tally - gazproj</title>
+		<link rel='stylesheet' href='/gazproj/styles.css'>
+		<style>
+			#tallytable {
+				min-width: 30em;
+			}
+			#tallytable td, #tallytable th {
+				padding: 10px;
+			}
+			#tallytable td, #tallytable th, #tallytable input {
+				font-size: 20pt;
+			}
+			#tallytable tbody div.button {
+				width: 1.5em;
+				height: 4em;
+				text-align: center;
+				line-height: 4em;
+			}
+			#tallytable tbody div.button.tallyplus {
+				width: 4em;
+			}
+			#tallytable .tallycountertd input {
+				text-align: center;
+				width: 6em;
+			}
+			#tallytable .button {
+				border-style: outset;
+			}
+			#tallytable .button:hover {
+				border-style: inset;
+			}
+		</style>
+	</head>
+	<body>
+		<table id='tallytable'>
+			<thead>
+				<tr>
+					<th>Thing</th>
+					<th>Tally</th>
+					<th>+</th>
+					<th>-</th>
+				</tr>
+			</thead>
+			<tbody></tbody>
+			<tfoot>
+				<tr>
+					<th colspan='4'>
+						<div class="button" id='tallynew'>Add new row</div>
+					</th>
+				</tr>
+				<tr>
+					<th colspan='4'>
+						<div class="button" id='tallyexport'>Export</div>
+					</th>
+				</tr>
+			</tfoot>
+		</table>
+		<div id='tallyexported'>Exported text, copy from here<br><textarea id="tallyexportedarea"></textarea></div>
+		<script>
+			let rowcounter = 0, tbody = document.querySelector('#tallytable tbody'), rows = [], exported = document.getElementById('tallyexportedarea');
+			const e = (t, params) => {
+				const el = document.createElement(t);
+				if (!(params === undefined)) {
+					if (params.text) {
+						el.textContent = params.text;
+					} else if (params.html) {
+						el.innerHTML = params.html;
+					}
+					if (params.class) {
+						el.className = params.class;
+					}
+					if (params.id) {
+						el.id = params.id;
+					}
+					if (params.attr) {
+						for (let [k, v] of Object.entries(params.attr)) {
+							el.setAttribute(k, v);
+						}
+					}
+					if (params.append) {
+						el.append(...params.append);
+					}
+				}
+				return el;
+			};
+			class TallyRow {
+				constructor(num) {
+					const self = this;
+					this.number = num;
+					this.name = e('input', {id:'name'+this.number, attr:{type:'text', value:'tally'+this.number}});
+					this.counter = e('input', {id:'count'+this.number, attr:{type:'number', value:'0'}});
+					this.plus = e('div', {class:'tallyplus', text:'+1'});
+					this.minus = e('div', {class:'tallyminus', text:'-1'});
+
+					this.row = e('tr', {attr:{'data-row':this.number}, append:[
+						e('td', {class:'tallynametd', append:[this.name]}),
+						e('td', {class:'tallycountertd', append:[this.counter]}),
+						e('td', {class:'tallyplustd', append:[this.plus]}),
+						e('td', {class:'tallyminustd', append:[this.minus]}),
+					]});
+
+					this.plus.addEventListener('click', ()=>{self.counter.valueAsNumber++;})
+					this.minus.addEventListener('click', ()=>{self.counter.valueAsNumber--;})
+				}
+				export(){
+					return `${this.name.value}\t${this.counter.valueAsNumber}`;
+				}
+			}
+			const addNewRow = ()=>{
+				const row = new TallyRow(rowcounter);
+				tbody.append(row.row);
+				rows.push(row);
+				rowcounter++;
+			}
+			const exportRows = ()=>{
+				const out = [];
+				let total = 0;
+				for (const row of rows) {
+					total += row.counter.valueAsNumber;
+					out.push(row.export());
+				}
+				exported.textContent = `Total: ${total}\n${out.join('\n')}`;
+			};
+
+			document.getElementById('tallynew').addEventListener('click', addNewRow);
+			document.getElementById('tallyexport').addEventListener('click', exportRows);
+		</script>
+	</body>
+</html>

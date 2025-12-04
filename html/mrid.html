@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>MRID - minimal runescape3 item database</title>
+		<link rel='stylesheet' href='/gazproj/styles.css'>
+		<script>
+		window.dbtype = 'items';
+		window.rowDef = [
+			{name:'img', format:(data)=>e('img', {attr:{src:`icons/png/${data.id}.png`}})},
+			{name:'id', format:(data)=>e('a', {text:data.id, attr:{href:'?q='+Math.max(0,data.id-15)+'-'+(data.id+15)+'&h='+data.id}})},
+			'name',
+			{name:'detail', class:'mrdb-wiki', format:(data)=>e('href', {text:'detail', class:'buttonlink', attr:{target:'_new', href:'./detail?id='+data.id}})},
+			{name:'tradeable', format:(data)=>`${data.tradeable}${data.on_ge ? ' (GE)':''}`},
+			'members',
+			'value',
+			'examine',
+			'actions_inv',
+			'actions_worn',
+			'actions_ground',
+			{name:'models', class:'mrdb-modelstd'},
+			{name:'rotation', class:'mrdb-modelstd'},
+			{name:'modelTranslate', class:'mrdb-modelstd'},
+			{name:'colours', class:'mrdb-modelstd'},
+			{name:'textures', class:'mrdb-modelstd'},
+			{name:'scale', class:'mrdb-modelstd'},
+			{name:'maleModels', class:'mrdb-modelstd'},
+			{name:'femaleModels', class:'mrdb-modelstd'},
+			{name:'maleHeads', class:'mrdb-modelstd'},
+			{name:'femaleHeads', class:'mrdb-modelstd'},
+			{name:'links', class:'mrdb-wiki', format:(data)=>[
+				e('a', {text:'p', class:'buttonlink', attr:{href:geturl('https://runescape.wiki/',{title:data.name}), title:'go to this pagename', target:'_new'}}),
+				e('a', {text:'s', class:'buttonlink', attr:{href:geturl('https://runescape.wiki/w/Special:Search',{search:data.name}), title:'search for this pagename', target:'_new'}}),
+				e('a', {text:'l', class:'buttonlink', attr:{href:geturl('https://runescape.wiki/w/Special:Lookup',{type:'item',id:data.id,name:data.name}), title:'lookup this id', target:'_new'}}),
+				e('a', {text:'i', class:'buttonlink', attr:{href:geturl('https://runescape.wiki/w/Special:Bucket',{bucket:'item_id',select:'*',where:`{"id",${data.id}}`}), title:'search for this id', target:'_new'}}),
+				(data.hasrecipe ? e('a', {text:'recipe', class:'buttonlink', attr:{href:'../recipe?id='+data.id, title:'get infobox recipe', target:'_new'}}) : null)
+			]}
+		];
+		</script>
+		<script src="mrid.js"></script>
+	</head>
+	<body>
+		<p>You can search for RS3 item names here - search is case insensitive (eg <span
+	class="code">abyssal whip</span>). You can also use regular expressions by surrounding the search in // (e.g. <span class="code">/whip/</span>). You can also search by item ID here - you can search single IDs (<span class="code">4151</span>), ranges (<span class="code">4751-4851</span>), and offsets (<span class="code">4751+100</span>), as well as recents (<span class="code">recent50</span>). See also <a href="https://oldschool.runescape.wiki/w/User:Riblet15/Regex">riblet's regex guide</a>.</p>
+		<div id="mridform">
+			<label for="mrdb-search">Search: </label><input type="text" id="mrdb-search" name="mrdb-search" autocomplete="on"/><button id="mrdb-go">go</button><br>
+			<input type="checkbox" id="mrdb-noted" name="mrdb-noted" checked /><label for="mrdb-noted">Hide noted</label>
+			<input type="checkbox" id="mrdb-models" name="mrdb-models" /><label for="mrdb-models">Show model information</label><br>
+			<button id="mrdb-clear">clear results</button>
+		</div>
+		<div id="mrdb-status"></div>
+		<div id="mrdb-current">Currently showing: <span id="mrdb-currentlist"></span></div>
+		<table>
+			<thead>
+				<tr>
+					<th>img</th>
+					<th>id</th>
+					<th>name</th>
+					<th>detail</th>
+					<th>tradeable</th>
+					<th>members</th>
+					<th>value</th>
+					<th>examine</th>
+					<th>actions_inventory</th>
+					<th>actions_worn</th>
+					<th>actions_ground</th>
+					<th class="modelth">models</th>
+					<th class="modelth">rotation</th>
+					<th class="modelth">modelTranslate</th>
+					<th class="modelth">colours</th>
+					<th class="modelth">textures</th>
+					<th class="modelth">scale</th>
+					<th class="modelth">maleModels</th>
+					<th class="modelth">femaleModels</th>
+					<th class="modelth">maleHeads</th>
+					<th class="modelth">femaleHeads</th>
+					<th>wiki</th>
+				</tr>
+			</thead>
+			<tbody id="mrdb-body" class="hidenoted"></tbody>
+		</table>
+	</body>
+</html>

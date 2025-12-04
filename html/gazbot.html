@@ -1,0 +1,217 @@
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<title>Gaz GEBot status</title>
+	<style>
+		body {
+			font-family: sans-serif;
+		}
+
+		.wowee {
+			float: left;
+			height: 80px;
+			width: auto;
+		}
+
+		#container {
+			width: 100%;
+			clear: both;
+			display: flex;
+			flex-flow: row wrap;
+			justify-content: center;
+		}
+
+		#container>div {
+			width: 500px;
+			border-radius: 1em;
+			padding: 1em;
+			margin: 1em 0.5em;
+		}
+
+		#rs {
+			background: #c1deee;
+			box-shadow: 10px 10px 5px #6ba5c8;
+		}
+
+		#os {
+			background: #c0a886;
+			box-shadow: 10px 10px 5px #9b876a;
+		}
+
+		.logo {
+			float: right;
+		}
+
+		#container>div>span {
+			display: block;
+			font-size: 90%;
+			margin-top: 0.5em;
+		}
+
+		#container>div>span>span {
+			font-size: 110%;
+			display: block;
+		}
+
+		.notrunning .lastids,
+		.notrunning .lastitem {
+			display: none !important;
+		}
+
+		.noproblempages .problempages {
+			display: none;
+		}
+
+		span.subtitle {
+			margin-left: 0.5em;
+		}
+
+		h1 {
+			margin-bottom: 0.2em;
+		}
+
+		.link-refresh {
+			display: inline-block !important;
+			border-radius: 5px;
+			padding: 2px;
+			cursor: pointer;
+		}
+
+		.link-refresh[data-wiki="rs"] {
+			border: 2px #6ba5c8 outset;
+			background: #6ba5c8;
+		}
+
+		.link-refresh[data-wiki="os"] {
+			border: 2px #9b876a outset;
+			background: #9b876a;
+		}
+	</style>
+</head>
+
+<body>
+	<img class="wowee" src="wowee.png" />
+	<h1> Gaz GEBot Status</h1>
+	<span class="subtitle">Automatically refreshes every minute</span>
+	<div id="container">
+		<div id="rs" class="unknown">
+			<a href="https://runescape.wiki/w/Special:Contributions/Gaz_GEBot"><img class="logo" src="rsw.png" /></a>
+			<span>Last refresh time: <span class="time-refresh">not yet refreshed!</span><span class="link-refresh"
+					data-wiki="rs">Refresh now!</span></span>
+			<span>Status: <span class="status">unknown</span></span>
+			<span>Last run duration: <span class="duration-run">unknown</span></span>
+			<span>Last detected update: <span class="time-update">unknown</span></span>
+			<span class="updatecheck">Last check for update: <span class="time-check">unknown</span></span>
+			<span class="lastids">IDs left to process: <span class="last-ids">unknown</span></span>
+			<span>Problem IDs found (failed to process 3 times): <span class="problempagesnone">unknown</span></span>
+			<table class="problempages">
+				<thead>
+					<tr>
+						<th>Page</th>
+						<th>Error message</th>
+					</tr>
+				</thead>
+				<tbody></tbody>
+			</table>
+			<span>Last status file update: <span class="time-filewrite">unknown</span></span>
+		</div>
+		<div id="os">
+			<a href="https://oldschool.runescape.wiki/w/Special:Contributions/Gaz_GEBot"><img class="logo"
+					src="osrsw.png" /></a>
+			<span>Last refresh time: <span class="time-refresh">not yet refreshed!</span> <span class="link-refresh"
+					data-wiki="os">Refresh now!</span></span>
+			<span>Status: <span class="status">unknown</span></span>
+			<span>Last run duration: <span class="duration-run">unknown</span></span>
+			<span>Last detected update: <span class="time-update">unknown</span></span>
+			<span class="updatecheck">Last check for update: <span class="time-check">unknown</span></span>
+			<span class="lastids">IDs left to process: <span class="last-ids">unknown</span></span>
+			<span>Problem IDs found (failed to process 3 times): <span class="problempagesnone">unknown</span></span>
+			<table class="problempages">
+				<thead>
+					<tr>
+						<th>Page</th>
+						<th>Error message</th>
+					</tr>
+				</thead>
+				<tbody></tbody>
+			</table>
+			<span>Last status file update: <span class="time-filewrite">unknown</span></span>
+		</div>
+	</div>
+	<script>
+		const ftime = (t) => (new Date(Math.floor(t * 1000))).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', timeZoneName: 'short' });
+		const fdelta = (t) => {
+			let s = [], _t = t, x, pl;
+			if (_t > 3600) {
+				x = Math.floor(_t / 3600);
+				pl = 's';
+				if (x === 1) {
+					pl = '';
+				}
+				s.push(x + ' hour' + pl);
+				_t -= 3600 * x;
+			}
+			if (_t > 60) {
+				x = Math.floor(_t / 60);
+				pl = 's';
+				if (x === 1) {
+					pl = '';
+				}
+				s.push(x + ' minute' + pl);
+				_t -= 60 * x;
+			}
+			x = Math.floor(_t);
+			pl = 's';
+			if (x === 1) {
+				pl = '';
+			}
+			s.push(x + ' second' + pl);
+			return s.join(', ');
+		};
+		const getData = async (wiki)=>{
+			let resp = await fetch('status_'+wiki);
+			updatePage(await resp.json());
+		};
+		const refresh = async ()=>{
+			await Promise.all([getData('rs'), getData('os')]);
+		};
+		const updatePage = (data) => {
+			const container = document.getElementById(data.wiki);
+			container.classList.remove('unknown','running','notrunning');
+			if (data.running) {
+				container.classList.add('running');
+				container.querySelector('.status').textContent = 'Running!';
+				container.querySelector('.last-ids').textContent = `${data.item} remaining of ${data.pages}`;
+			} else {
+				container.classList.add('notrunning');
+				container.querySelector('.status').textContent = 'Waiting for next update';
+				container.querySelector('.last-ids').textContent = '';
+			}
+			container.querySelector('.time-update').innerHTML = `${ftime(data.updated)}<br>${fdelta(Date.now()/1000-data.updated)} ago`;
+			container.querySelector('.time-filewrite').innerHTML = `${ftime(data.touched)}<br>${fdelta(Date.now()/1000-data.touched)} ago`;
+			container.querySelector('.time-check').innerHTML = `${ftime(data.checked)}<br>${fdelta(Date.now()/1000-data.checked)} ago`;
+			container.querySelector('.duration-run').textContent = fdelta(data.duration);
+			const tbody = container.querySelector('.problempages tbody');
+			if (data.problempages.length > 0) {
+				container.classList.remove('noproblempages');
+				container.querySelector('.problempagesnone').textContent = data.problempages.length;
+				tbody.innerHTML = '';
+				for (const prob of data.problempages) {
+					tbody.innerHTML += `<tr><td>${prob[0]}</td><td>${prob[1]}</td></tr>`;
+				}
+			} else {
+				container.querySelector('.problempagesnone').textContent = 'None!';
+				tbody.innerHTML = '';
+				container.classList.add('noproblempages');
+			}
+			container.querySelector('.time-refresh').textContent = ftime(Date.now()/1000);
+		};
+		// init
+		refresh();
+		document.querySelectorAll('link-refresh').forEach(e=>e.addEventListener('click', ev=>getData(ev.dataset.wiki)))
+		setInterval(refresh, 60000);
+	</script>
+</body>
+
+</html>

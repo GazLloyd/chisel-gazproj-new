@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>MRND - minimal runescape3 npc database</title>
+		<link rel='stylesheet' href='/gazproj/styles.css'>
+		<script>
+		window.dbtype = 'npcs';
+		window.rowDef = [
+			{name:'id', format:(data)=>e('a', {text:data.id, attr:{href:'?q='+Math.max(0,data.id-15)+'-'+(data.id+15)+'&h='+data.id}})},
+			'name',
+			{name:'detail', class:'mrdb-wiki', format:(data)=>e('href', {text:'detail', class:'buttonlink', attr:{target:'_new', href:'./detail?id='+data.id}})},
+			'combat',
+			'members',
+			'examine',
+			'actions',
+			'members_actions',
+			{name:'petid', format:(data)=>data.pet_item_id!=='' ? e('a', {text:data.pet_item_id, attr:{href:'mrid?q='+Math.max(0,data.pet_item_id-15)+'-'+(data.pet_item_id+15)+'&h='+data.pet_item_id}}) : ''},
+			{name:'bestiary', format:(data)=>e('a', {text:'bestiary', attr:{href:'/bestiary?npcid='+data.id, target:'_new'}})},
+			{name:'map', format:(data)=>[
+				e('e', {text:'3d', attr:{href:'https://map.gazlloyd.com/?objectid='+data.id, target:'_new'}}),
+				'&nbsp;&bull;&nbsp;',
+				e('e', {text:'2d', attr:{href:'https://mejrs.github.io/?objectid='+data.id, target:'_new'}})
+			]},
+			{name:'runemetrics', format:(data)=>e('a', {text:'runemetrics', attr:{href:'/runemetrics/monsters/'+data.id, target:'_new'}})},
+			{name:'links', class:'mrdb-wiki', format:(data)=>[
+				e('a', {text:'p', attr:{class:'buttonlink', href:geturl('https://runescape.wiki/',{title:data.name}), title:'go to this pagename', target:'_new'}}),
+				e('a', {text:'s', attr:{class:'buttonlink', href:geturl('https://runescape.wiki/w/Special:Search',{search:data.name}), title:'search for this pagename', target:'_new'}}),
+				e('a', {text:'l', attr:{class:'buttonlink', href:geturl('https://runescape.wiki/w/Special:Lookup',{type:'item',id:data.id,name:data.name}), title:'lookup this id', target:'_new'}}),
+				e('a', {text:'i', attr:{class:'buttonlink', href:geturl('https://runescape.wiki/w/Special:Bucket',{bucket:'item_id',select:'*',where:`{"id",${data.id}}`}), title:'search for this id', target:'_new'}})
+			]}
+		];
+		</script>
+		<script src="mrid.js"></script>
+	</head>
+	<body>
+		<p>You can search for RS3 NPC names here - search is case insensitive (eg <span
+	class="code">abyssal demon</span>). You can also use regular expressions by surrounding the search in // (e.g. <span class="code">/demon/</span>). You can also search by NPC ID here - you can search single IDs (<span class="code">4151</span>), ranges (<span class="code">4751-4851</span>), and offsets (<span class="code">4751+100</span>), as well as recents (<span class="code">recent50</span>). See also <a href="https://oldschool.runescape.wiki/w/User:Riblet15/Regex">riblet's regex guide</a>.</p>
+		<div id="mridform">
+			<label for="q">Search: </label><input type="text" id="q" name="q" /><button id="go">go</button><br>
+			<button id="clear">clear results</button>
+		</div>
+		<div id="current">Currently showing: <span id="currentlist"></span></div>
+		<table>
+			<thead>
+				<tr>
+					<th>id</th>
+					<th>name</th>
+					<th>detail</th>
+					<th>combat</th>
+					<th>members</th>
+					<th>examine</th>
+					<th>actions</th>
+					<th>actions_members</th>
+					<th>pet_item_id</th>
+					<th>bestiary</th>
+					<th>map</th>
+					<th>runemetrics</th>
+					<th>wiki</th>
+				</tr>
+			</thead>
+			<tbody id="mridbody"></tbody>
+		</table>
+	</body>
+</html>
