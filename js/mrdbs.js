@@ -1,6 +1,6 @@
 const rowDef = window.rowDef;
 const dbtype = window.dbtype;
-const gbid = document.getElementById;
+const gbid = x=>document.getElementById(x);
 const geturl = (base, params) => {
 	const url = new URL(base);
 	const search = new URLSearchParams(params);

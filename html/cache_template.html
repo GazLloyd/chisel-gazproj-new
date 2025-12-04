@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>chisel cache status</title>
+    <style>
+		table th, table td {{
+			border: #172136 1px solid;
+			padding: 5px;
+		}}
+		table th {{
+			background: #313e59;
+			border-bottom-width: 2px;
+		}}
+		table td {{
+			background: #222e45;
+		}}
+		table {{
+			border-collapse: collapse;
+			margin-top: 1em;
+		}}
+		body {{
+			background: #071022;
+				color: #f9f9f9;
+		}}
+		a {{
+			color: #8cabe6;
+		}}
+		table tr td:first-of-type {{
+			height: 30px;
+			background-position: center center;
+			background-repeat: no-repeat;
+			width: 35px;
+		}}
+		tr.items td:first-of-type {{
+			background-image: url(https://chisel.weirdgloop.org/gazproj/icons/png/4151.png);
+		}}
+		tr.npcs td:first-of-type {{
+			background-image: url(https://chisel.weirdgloop.org/gazproj/icons/png/7979.png);
+		}}
+		tr.locations td:first-of-type {{
+			background-image: url(https://chisel.weirdgloop.org/gazproj/icons/png/4277.png);
+		}}
+		tr.structs td:first-of-type {{
+			background-image: url(https://chisel.weirdgloop.org/gazproj/icons/png/2798.png);
+		}}
+		tr.bestiary td:first-of-type {{
+			background-image: url(https://chisel.weirdgloop.org/gazproj/icons/png/42843.png);
+		}}
+		tr.dbrows td:first-of-type {{
+			background-image: url(https://chisel.weirdgloop.org/gazproj/icons/png/34026.png);
+		}}
+		tr.enums td:first-of-type {{
+			background-image: url(https://chisel.weirdgloop.org/gazproj/icons/png/28710.png);
+		}}
+		tr.alog td:first-of-type {{
+			background-image: url(https://chisel.weirdgloop.org/gazproj/icons/png/1511.png);
+		}}
+		tr.achievements td:first-of-type {{
+			background-image: url(https://chisel.weirdgloop.org/gazproj/icons/png/13562.png);
+		}}
+		tr.quests td:first-of-type {{
+			background-image: url(https://chisel.weirdgloop.org/gazproj/icons/png/84.png);
+		}}
+		tr.params td:first-of-type {{
+			background-image: url(https://chisel.weirdgloop.org/gazproj/icons/png/50371.png);
+		}}
+		tr.versions td:first-of-type {{
+			background-image: url(https://chisel.weirdgloop.org/gazproj/icons/png/15332.png);
+		}}
+		tr.rs-ge td:first-of-type {{
+			background-image: url(https://chisel.weirdgloop.org/gazproj/icons/png/24860.png);
+		}}
+		tr.os-ge td:first-of-type {{
+			background-image: url(https://chisel.weirdgloop.org/gazproj/icons/png/39459.png);
+		}}
+		tr.rsfsw-ge td:first-of-type {{
+			background-image: url(https://chisel.weirdgloop.org/gazproj/icons/png/54031.png);
+		}}
+		tr.osfsw-ge td:first-of-type {{
+			background-image: url(https://chisel.weirdgloop.org/gazproj/icons/png/44819.png);
+		}}
+		tr td:nth-of-type(3), tr td:nth-of-type(6) {{
+			text-align: right;
+		}}
+		.alog td, .osfsw-ge td, .rsfsw-ge td {{
+			background-color: #444;
+		}}
+		.osfsw-ge td, .rsfsw-ge td {{
+			font-style: italic;
+		}}
+		.alog td:nth-child(2):after {{
+			font-style: italic;
+			content: " (defunct)";
+		}}
+		.historic {{
+			font-style: italic;
+		}}
+    </style>
+</head>
+<body>Download the current version of the RS3 cache that chisel has available.
+    <table>
+    	<thead><tr><th colspan="2">File</th><th>Size</th><th>Modified</th><th>Link</th><th>Diff size</th><th>Diff links</th></tr></thead>
+		<tbody>
+			{rows}
+		</tbody>
+    </table>
+    <div class="historic">For space reasons we don't store historical caches on chisel. You can download them from my <a href="https://drive.google.com/drive/folders/1mnt72EVrUmizw3eEuAv4zDKrybmby3S9?usp=sharing">Google Drive here</a>. Let me know if you have any issues with the current or historical caches.</div>
+    <hr>
+    <div>Gaz GEBot's data dumps for RS and OS.</div>
+    <table>
+		<thead><tr><th colspan="2">File</th><th>Link</th><th>Status file</th></tr></thead>
+		<tbody>
+			{gerows}
+		</tbody>
+    </table>
+	<div class="historic">Feel free to use this in your projects. If you are monitoring for an update, I would recommend fetching the status file, rather than the larger dump file.</div>
+    <div class="historic">For historic GE price data see <a href="https://api.weirdgloop.org">api.weirdgloop.org</a>. <span style="font-size: small;">(To be clear, this is the GE mid price as reported by Jagex. For live prices for OSRS, see <a href="https://oldschool.runescape.wiki/w/RuneScape:Real-time_Prices">RuneScape:Real-time Prices</a>.</span></div>
+</body>
+</html>

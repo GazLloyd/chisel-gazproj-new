@@ -1,11 +1,15 @@
+# stdlib imports
 import os
 import sys
-sys.path.append('/tools/gazproj/')
-from wsgirouter import Router
 import orjson
 from time import strftime, gmtime
 from urllib.parse import parse_qs
 from re import compile as recomp, IGNORECASE
+
+# custom imports
+sys.path.append('/tools/gazproj/') # make sure this is on PATH
+from wsgirouter import Router
+import tabulate
 
 # maximum size of a chunk to read when serving static files
 # int
@@ -16,15 +20,15 @@ CHUNKSIZE=1024*1024
 STATIC_SERVES = {
 	'text/html; charset=utf-8': [
 		(r'^/$', 'html/index.html'), # homepage
-		(r'^/mrid$', 'html/mrid.html'), #mrdbs
-		(r'^/mrod$', 'html/mrod.html'), #mrdbs
-		(r'^/mrnd$', 'html/mrnd.html'), #mrdbs
-		(r'^/usercontribsdiff$', 'html/usercontribsdiff.html'),
-		(r'^/tally$', 'html/tally.html'),
-		(r'^/gazbot$', 'html/gazbot.html'),
-		(r'^/recipe$', 'html/recipe.html'),
-		(r'^$', 'html/.html'),
-		(r'^$', 'html/.html'),
+		(r'^/mrid/?$', 'html/mrid.html'), #mrdbs
+		(r'^/mrod/?$', 'html/mrod.html'), #mrdbs
+		(r'^/mrnd/?$', 'html/mrnd.html'), #mrdbs
+		(r'^/usercontribsdiff/?$', 'html/usercontribsdiff.html'),
+		(r'^/tally/?$', 'html/tally.html'),
+		(r'^/gazbot/?$', 'html/gazbot.html'),
+		(r'^/recipe/?$', 'html/recipe.html'),
+		(r'^/cache/?$', 'html/.html'),
+		(r'^/cache/tabulate/?$', 'html/tabulate.html'),
 		(r'^$', 'html/.html'),
 		(r'^$', 'html/.html'),
 		(r'^$', 'html/.html'),
@@ -36,8 +40,8 @@ STATIC_SERVES = {
 		(r'^mrdbs.js$', 'js/mrdbs.js'),
 	],
 	'application/json': [
-		(r'$/gazbot/status_rs$', '/home/gaz/gazgebot/GazGEBot/config/rs_ge.json'),
-		(r'$/gazbot/status_os$', '/home/gaz/gazgebot/GazGEBot/config/os_ge.json'),
+		(r'$/gazbot/status_rs(\.json)?$', '/home/gaz/gazgebot/GazGEBot/config/rs_ge.json'),
+		(r'$/gazbot/status_os(\.json)?$', '/home/gaz/gazgebot/GazGEBot/config/os_ge.json'),
 		(r'$/gazbot/rs_dump.json$', '/home/gaz/gazgebot/GazGEBot/rs_dump.json'),
 		(r'$/gazbot/os_dump.json$', '/home/gaz/gazgebot/GazGEBot/os_dump.json'),
 	]
@@ -48,7 +52,7 @@ def inputhtmlsafe(s):
 
 # names of the cache files, without the rest of the filepath or .json
 # list[str]
-RSCACHE_FILENAMES = ['items', 'npcs', '']
+RSCACHE_FILENAMES = ['items', 'npcs', 'locations', 'structs', 'dbrows', 'enums', 'achievements', 'quests', 'params', 'versions', 'bestiary', 'alog']
 # directory of the cache files
 # str
 RSCACHE_FILEPATH = '/home/gaz/rscache' 
@@ -64,29 +68,40 @@ application = Router()
 r = application.route
 
 # open a file with utf-8 encoding
-# (str, str) => filehandle
+# (str filename, str open type) => filehandle
 def openu(fn, ot):
 	return open(fn, ot ,encoding='utf-8')
 
 # format a time in HH:MM:SS DD MM YY
-# (float) => str
+# (float timestamp) => str
 def timeformat(t):
 	return strftime("%H:%M:%S %d %B %Y" , gmtime(t))
 
 # returns the formated modified-by time for a file
-# (str) => str
+# (str filename) => str
 def modtime(fn):
 	return timeformat(os.stat(fn).st_mtime)
 
+# formats a file's size with 1 decimal place
+# (str filename) => str
+def filesize(fn):
+	num = os.stat(fn).st_size
+	suffix = 'B'
+	for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
+		if abs(num) < 1024.0:
+			return '%3.1f %s%s' % (num, unit, suffix)
+		num /= 1024.0
+	return '%.1f %s%s' % (num, 'Yi', suffix)
+
 # load a json file (efficiently with orjson)
-# (str)=>dict|list
+# (str filename)=>dict|list
 def loadjson(filepath):
 	with open(filepath, 'rb') as f:
 		return orjson.loads(f.read())
 
 # save a json file (efficiently using orjson)
 # optional args: indent - pretty-print the json; sort - sort the keys of dicts in the json
-# (str, dict|list, bool=false, bool=false) => void
+# (str filename, dict|list json, bool indent=false, bool sortkeys=false) => void
 def savejson(filepath, json, indent=False, sort=False):
 	flags = orjson.OPT_APPEND_NEWLINE
 	if indent:
@@ -99,6 +114,7 @@ def savejson(filepath, json, indent=False, sort=False):
 # generate the HTML files of the diffs
 # () => void
 def makeDiffHtmls():
+	rows = []
 	for fn in RSCACHE_FILENAMES:
 		with openu(f'{RSCACHE_FILEPATH}/{fn}_diff.txt', 'r') as fin, openu(f'{RSCACHE_FILEPATH}/{fn}_diff.html', 'w') as fout:
 			fout.write(f'''<!DOCTYPE html>
@@ -119,25 +135,27 @@ def makeDiffHtmls():
 			fout.write('''</pre>
 			</body>
 			</html>''')
+		rows.append('<tr class="{fn}"><td></td><td>{fn}</td><td>{fn_size}</td><td>{fn_mod}</td><td><a href="https://chisel.weirdgloop.org/gazproj/cache/{fn}.json" download>download</a></td><td>{fdiff_size}</td><td><a href="https://chisel.weirdgloop.org/gazproj/cache/{fn}_diff.html">view</a> &bull; <a href="https://chisel.weirdgloop.org/gazproj/cache/{fn}_diff.txt" download>download</a></td></tr>'.format(
+			fn=fn,
+			fn_size=filesize(f'{RSCACHE_FILEPATH}/{fn}.json'),
+			fn_mod=modtime(f'{RSCACHE_FILEPATH}/{fn}.json'),
+			fdiff_size=filesize(f'{RSCACHE_FILEPATH}/{fn}_diff.txt')
+		))
 	with openu('html/index_template.html','r') as ftemp, openu('html/index.html', 'w') as fout:
 		fout.write(ftemp.read().format(
-			items = modtime('/home/gaz/rscache/items.json'),
-			alog = modtime('/home/gaz/rscache/alog.json'),
-			npcs = modtime('/home/gaz/rscache/npcs.json'),
-			best = modtime('/home/gaz/rscache/bestiary.json'),
-			objs = modtime('/home/gaz/rscache/locations.json')
+			items = modtime(RSCACHE_FILEPATH+'/items.json'),
+			alog = modtime(RSCACHE_FILEPATH+'/alog.json'),
+			npcs = modtime(RSCACHE_FILEPATH+'/npcs.json'),
+			best = modtime(RSCACHE_FILEPATH+'/bestiary.json'),
+			objs = modtime(RSCACHE_FILEPATH+'/locations.json')
 		))
-	for mr, mt in [('mrid','items'), ('mrnd', 'npcs'), ('mrod', 'locations')]:
-		with openu(f'html/{mr}_template.html','r') as ftemp, openu(f'html/{mr}.html', 'w') as fout:
-			dictofnames = {x['id']:x.get('name','') for x in rscache_data[mt]}
-			listofnames = []
-			for i in range(0,max(dictofnames.keys())+1):
-				if i in dictofnames:
-					listofnames.append(dictofnames[i])
-				else:
-					listofnames.append('')
-			js = orjson.dumps(listofnames).decode().replace("'",r"\'")
-			fout.write(ftemp.format(namesjson=js))
+	with openu('html/cache_template.html', 'r') as ftemp, openu('html/cache.html', 'w') as fout:
+		gerows = []
+		for f_name in ['rs', 'os']:#, 'rsfsw', 'osfsw']:
+			f_file = f'/home/gaz/gazgebot/GazGEBot/{f_name}_dump.json'
+			r = '<tr class="{fn}-ge"><td></td><td>{fn}</td><td><a href="https://chisel.weirdgloop.org/gazproj/gazbot/{fn}_dump.json" download>download</a></td><td><a href="https://chisel.weirdgloop.org/gazproj/gazbot/status_{fn}">status_{fn}</a></td></tr>'.format(fn=f_name)
+			gerows.append(r)
+		fout.write(ftemp.read().format(rows=rows,gerows=gerows))
 
 # reload the RS cache jsons & remake the html
 # () => void
@@ -198,6 +216,9 @@ for fn in RSCACHE_FILENAMES:
 # reload the cache
 reloadRSCache()
 
+# MRDB helpers
+# get the item's name
+# (dict item, any default)=>str|any
 def get_item_name(item_cache, dflt=None):
 	if item_cache is not None:
 		if item_cache.get('name') is not None:
@@ -206,6 +227,8 @@ def get_item_name(item_cache, dflt=None):
 			return item_cache.get('combine_shard_name')
 	return dflt
 
+# get the unnoted item if possible
+# (dict item)=>dict
 def get_unnoted_item(item_cache):
 	notedata = item_cache.get('noteData')
 	if notedata is None:
@@ -214,9 +237,13 @@ def get_unnoted_item(item_cache):
 		return None
 	return rscache_data['items'].get(notedata)
 
+# remove nulls from a list
+# (list)=>list
 def stripNulls(l):
 	return list(filter(lambda x: not (x is None or x=='null'), l))
 
+# format the MRDB responses
+# (list<cache entries> values) => list<dict>
 def formatMRDB_items(vals):
 	out = []
 	for cache in vals:
@@ -385,6 +412,8 @@ def route_mrdb_get(env,resp):
 	return orjson.dumps(out)
 
 
+# mr[ion]d/detail body - this part is standard
+# (str body, str title, int id, str name) => str
 def mrdb_detail_body(body,title,i,name):
 	return '''<!DOCTYPE html>
 	<html>
@@ -553,10 +582,94 @@ def route_mrod_detail(env, resp):
 
 @r(r'^/icons/png/\d{1,5}\.png$')
 def route_icons_png(env, resp):
-	path = '/home/gaz/iteminfobox/inventory/'+ environ.get('PATH_INFO')[1:]
+	path = '/home/gaz/iteminfobox/inventory/'+ env.get('PATH_INFO')[1:]
 	return serve_file(resp,path,'image/png')
 
-@r(r'^/recipe$')
-def page(environ, start_response):
-    start_response('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
-    return '<html><head><title>infobox recipe generator</title></head><body>Hi! This is where you can generate some infobox recipes - if things don\'t seem to work, let me know. Append the item ID of the item to the end of the url, e.g. <a href="recipe/361">/recipe/361</a>. You can find the item ID in the infobox item on the page.\n\nThis isn\'t perfect so you will need to put in some manual effort to make sure infoboxes are correct.</body></html>'
+@r(r'^/recipe/\d+$')
+def route_recipe(env, resp):
+	itemid = env.get('PATH_INFO')[8:]
+	infobox = make_recipe() #TODO
+	resp('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
+	return '''<!DOCTYPE html>
+	<html>
+		<head>
+			<title>Infobox Recipe for {itemid}</title>
+			<link rel='stylesheet' href='/gazproj/styles.css'>
+		</head>
+		<body>
+			<pre>{infobox}</pre>
+		</body>
+	</html>'''.format(itemid=itemid, infobox=infobox).encode('utf-8')
+
+@r(r'^/gazbot/rcep\.log$')
+def route_gazbot_rceplog(env, resp):
+	with open('/home/gaz/gazgebot/GazGEBot/rcmonitor_patrol.log', 'r') as f:
+		txt = f.read()
+		html = '''
+		<!DOCTYPE html>
+		<html>
+		<head><title>rcep.log</title><link rel='stylesheet' href='/gazproj/styles.css'></head>
+		<body>
+		<pre>{}</pre>
+		</body>
+		</html>'''.format(txt)
+		resp('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
+		return html
+
+@r(r'^/gazbot/rcep_whitelist\.txt$')
+def route_gazbot_rcepwhitelist(environ, start_response):
+	with open('/home/gaz/gazgebot/GazGEBot/config/rcmonitor_whitelist.txt', 'r') as f:
+		txt = f.read()
+		html = '''
+		<!DOCTYPE html>
+		<html>
+		<head><title>rcep_whitelist.txt</title><link rel='stylesheet' href='/gazproj/styles.css'></head>
+		<body>
+		<pre>{}</pre>
+		</body>
+		</html>'''.format(txt)
+		resp('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
+		return html
+
+@r(r'^/img/.*?\.png$')
+def route_imgs_folder(env, resp):
+	return serve_file(resp, env.get('PATH_INFO')[1:], 'image/png')
+
+@r(r'^/cache/tabulate/get$')
+def route_cache_tabulate_get(env, resp):
+	query = env.get('QUERY_STRING')
+	query = parse_qs(query)
+	t = query.get('type', ['items'])[0]
+	t = t.lower().strip()
+	if t not in ['items', 'npcs', 'structs', 'locations', 'enums', 'quests', 'achievements', 'dbrows', 'bestiary']:
+		resp('400',[('Content-Type', 'application/json')])
+		return b'{"error": true, "message": "Invalid cache type"}'
+	cache = rscache_data[t]
+	s = query.get('search', [])
+	if len(s) == 0:
+		resp('400',[('Content-Type', 'application/json')])
+		return b'{"error": true, "message": "No search provided"}'
+	s = s[0].split(';')
+	try:
+		v = query.get('view', [''])[0].split(';')
+	except:
+		v = []
+	v = filter(lambda x: len(x)>0, map(lambda x: x.strip(), v))
+	s = filter(lambda x: len(x)>0, map(lambda x: x.strip(), s))
+	outname = tabulate.main(cache, s, v)
+	fname = outname.strip()
+	with open('/tools/gazproj/tabulatefiles/{}.json'.format(fname), 'r') as f:
+		resp('200 OK', [('Content-Type', 'application/json')])
+		return f.read()
+
+@application.route('/cache/tabulate/download')
+def route_cache_tabulate_download(env, resp):
+    query = env.get('QUERY_STRING')
+    query = parse_qs(query)
+    fname = query.get('file', [])
+    if len(fname) == 0:
+        resp('404 NOT FOUND', [('Content-Type', 'text/plain')])
+        return
+    fname = fname[0]
+    with open('/tools/gazproj/tabulatefiles/{}.tsv'.format(fname), 'r') as f:
+        return serve_file(resp, f'/tools/gazproj/tabulatefiles/{fname}.tsv', 'text/plain')

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8"/>
+	<link rel='stylesheet' href='/gazproj/styles.css'/>
+	<style>
+		#title {
+			font-size: xx-large;
+			font-weight: bold;
+		}
+		table {
+			border: 1px black solid;
+			border-collapse: collapse;
+		}
+		td, th {
+			border: 1px black solid;
+			border-collapse: collapse;
+			padding: 0 0.5em;
+		}
+		th {
+			background-color: lightgrey;
+		}
+		tr:nth-child(2n) {
+			background-color: lightblue;
+		}
+	</style>
+	<title>Cache tabulator</title>
+</head>
+<body>
+	<div id="header">
+		<div id="title">Cache file tabulator</div>
+		<div id="info">This page can be used to create a table of all items with specific fields available in the cache. Select the cache type, then input at least one search arg. Every entity with at least one of the search args present will be returned. You can additionally add some view args, which will be displayed for the returned entities, but not used for searching. By default 'id' and 'name' and always set as view args.<br>You can ask for contents of object or array fields by using dot notation - for example, to get the <code>keepsake_override</code> parameter of <code>extra</code>, use <code>extra.keepsake_override</code>. Example: try <code>extra.extra_0011F2</code> as a search arg and view args <code>equipId</code> and <code>equipSlotId</code>.<br>If you want to view the output with full filtering/sorting/etc., I encourage you to download the tsv file using the link then import that into a spreadsheet program like Excel or Google Sheets. If you accidentally close/refresh the page without downloading the file, feel free to let me (Gaz) know and I can likely fetch it from the server for you.</div>
+		<div id="form">
+			<div>
+				<label for="cachetype">Cache type:</label>
+				<select name="cachetype" id="cachetype">
+					<option value="items" selected>Items</option>
+					<option value="npcs">NPCs</option>
+					<option value="locations">Locations (scenery)</option>
+					<option value="bestiary">Bestiary</option>
+					<option value="quests">Quests</option>
+					<option value="achievements">Achievements</option>
+					<option value="dbrows">Database rows</option>
+					<option value="structs">Structs</option>
+					<option value="enums">Enums</option>
+				</select>
+			</div>
+			<div id="searchargs">
+				<label for="searcharg1">Search args:</label>
+				<input type="text" class="searcharg" name="searcharg1" id="searcharg1" data-num="1">
+				<input type="button" id="addsearch" value="Add field">
+			</div>
+			<div id="viewargs">
+				<label for="viewarg1">View args:</label>
+				<input type="text" class="viewarg" name="viewarg1" id="viewarg1" data-num="1">
+				<input type="button" id="addview" value="Add field">
+			</div>
+			<div>
+				<input type="button" id="submit" value="Submit">
+			</div>
+		</div>
+	</div>
+	<div id="body">
+	</div>
+	<script>
+		const gbid = x=>document.getElementById(x), qsa = x=>document.querySelectorAll(x);
+		const geturl = (base, params) => {
+			const url = new URL(base);
+			const search = new URLSearchParams(params);
+			url.search = search.toString();
+			return url.toString();
+		};
+		const e = (t, params) => {
+			const el = document.createElement(t);
+			if (!(params === undefined)) {
+				if (params.text) {
+					el.textContent = params.text;
+				} else if (params.html) {
+					el.innerHTML = params.html;
+				}
+				if (params.class) {
+					el.className = params.class;
+				}
+				if (params.id) {
+					el.id = params.id;
+				}
+				if (params.attr) {
+					for (let [k, v] of Object.entries(params.attr)) {
+						el.setAttribute(k, v);
+					}
+				}
+				if (params.append) {
+					el.append(...params.append);
+				}
+			}
+			return el;
+		};
+		const makeOutput = (data)=>{
+			const body = gbid('body');
+			if (data.error) {
+				body.textContent = data.message;
+				return;
+			}
+			const table = e('table', { append: [
+				e('thead', {append: [
+					e('tr', {append:
+						data.order.map(v=>e('th', {text:v}))
+					})
+				]}),
+				e('tbody', {append:
+					data.output.map(v=>e('tr', {append:
+						data.order.map(u=>e('td', {text:v[u]}))
+					}))
+				})
+			]});
+			const dl = e('div', {id:'download', append:[
+				e('a', {text:'download tsv', attr:{download:data.filename, href:`https://chisel.weirdgloop.org/gazproj/cache/tabulate/download?file=${data.filename}`}})
+			]});
+			body.innerHTML = '';
+			body.append(dl, table);
+		};
+		// init
+		gbid('addsearch').addEventListener('click', (event)=>{
+			const counter = qsa('#searchargs .searcharg').length;
+			const inp = e('input', {class:'searcharg', id: 'searcharg'+counter, attr:{type:'text', 'data-num':counter, name: 'searcharg'+counter}});
+			event.currentTarget.before(inp);
+		});
+		gbid('addview').addEventListener('click', (event)=>{
+			const counter = qsa('#viewargs .viewarg').length;
+			const inp = e('input', {class:'viewarg', id: 'viewarg'+counter, attr:{type:'text', 'data-num':counter, name: 'viewarg'+counter}});
+			event.currentTarget.before(inp);
+		});
+		gbid('submit').addEventListener('click', async (event)=>{
+			const type = gbid('cachetype').value;
+			const search = [], view = [];
+			qsa('#searchargs input.searcharg').forEach(e=>{const v = e.value.trim(); if (v !== '') search.push(v)});
+			qsa('#viewargs input.viewarg').forEach(e=>{const v = e.value.trim(); if (v !== '') view.push(v)});
+			const url = geturl('https://chisel.weirdgloop.org/gazproj/cache/tabulate/get', {type:type, search:search.join(';'), view:view.join(';')});
+			const resp = await fetch(url);
+			makeOutput(await resp.json());
+		});
+	</script>
+</body>
