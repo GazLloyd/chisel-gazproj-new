@@ -1,0 +1,15 @@
+{
+    "appName":"Strange & Golden rocks tracker",
+    "description":"Checkboxes to keep track of your rocks.",
+    "appUrl":"https://chisel.weirdgloop.org/gazproj/alt1/rocks",
+    "configUrl":"https://chisel.weirdgloop.org/gazproj/alt1/rocksconfig.json",
+    "defaultWidth":240,
+    "defaultHeight":750,
+    "minWidth":200,
+    "minHeight":200,
+    "maxWidth":1000,
+    "maxHeight":1000,
+    "requestHandlers":[],
+    "activators": [],
+    "permissions":"overlay"
+}

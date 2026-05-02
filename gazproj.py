@@ -3,13 +3,15 @@ import os
 import sys
 import orjson
 from time import strftime, gmtime
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, urlsplit
 from re import compile as recomp, IGNORECASE
+import sqlite3
 
 # custom imports
 sys.path.append('/tools/gazproj/') # make sure this is on PATH
 from wsgirouter import Router
 import tabulate
+import infobox
 
 # maximum size of a chunk to read when serving static files
 # int
@@ -24,28 +26,55 @@ STATIC_SERVES = {
 		(r'^/mrod/?$', 'html/mrod.html'), #mrdbs
 		(r'^/mrnd/?$', 'html/mrnd.html'), #mrdbs
 		(r'^/usercontribsdiff/?$', 'html/usercontribsdiff.html'),
+		(r'^/datasrc/?$', 'html/datasrcrender.html'),
 		(r'^/tally/?$', 'html/tally.html'),
 		(r'^/gazbot/?$', 'html/gazbot.html'),
 		(r'^/recipe/?$', 'html/recipe.html'),
 		(r'^/cache/?$', 'html/.html'),
 		(r'^/cache/tabulate/?$', 'html/tabulate.html'),
-		(r'^$', 'html/.html'),
-		(r'^$', 'html/.html'),
-		(r'^$', 'html/.html'),
+		(r'^/alt1/timers(\.html)?$', 'alt1/timer/timer.html'),
+		(r'^/alt1/contracts(\.html)?$', 'alt1/timer/timer.html'),
+		(r'^/alt1/rocks(\.html)?$', 'alt1/rocks/rocks.html'),
+		(r'^/alt1/transcribe(\.html|/transcriber2\.html|/index\.html)?$', 'alt1/transcriber/index.html'),
+		(r'^/pkmn/gs', 'html/pkmn.html'),
+		(r'^/pkmn/box9(guide)?(\.html)?', 'html/box9guide.html'),
+		(r'^/pkmn/plza(shiny)?(\.html)?', 'html/plzashiny.html')
 	],
 	'text/css': [
-		(r'^styles.css$', 'css/styles.css'),
+		(r'^/styles.css$', 'css/styles.css'),
+		(r'^/pkmn.css$', 'css/pkmn.css'),
 	],
 	'text/javascript': [
 		(r'^mrdbs.js$', 'js/mrdbs.js'),
+		(r'^/alt1/contracts.bundle.js$', 'alt1/constructioncontracts/contracts.bundle.js'),
+		(r'^/alt1/transcribe/main.js$', 'alt1/transcriber/main.js'),
 	],
 	'application/json': [
-		(r'$/gazbot/status_rs(\.json)?$', '/home/gaz/gazgebot/GazGEBot/config/rs_ge.json'),
-		(r'$/gazbot/status_os(\.json)?$', '/home/gaz/gazgebot/GazGEBot/config/os_ge.json'),
-		(r'$/gazbot/rs_dump.json$', '/home/gaz/gazgebot/GazGEBot/rs_dump.json'),
-		(r'$/gazbot/os_dump.json$', '/home/gaz/gazgebot/GazGEBot/os_dump.json'),
+		(r'^/gazbot/status_rs(\.json)?$', '/home/gaz/gazgebot/GazGEBot/config/rs_ge.json'),
+		(r'^/gazbot/status_os(\.json)?$', '/home/gaz/gazgebot/GazGEBot/config/os_ge.json'),
+		(r'^/gazbot/rs_dump.json$', '/home/gaz/gazgebot/GazGEBot/rs_dump.json'),
+		(r'^/gazbot/os_dump.json$', '/home/gaz/gazgebot/GazGEBot/os_dump.json'),
+		(r'^/alt1/timerconfig.json$', 'alt1/timer/timerconfig.json'),
+		(r'^/alt1/contractsconfig.json$', 'alt1/constructioncontracts/contractsconfig.json'),
+		(r'^/alt1/transcribe/appconfig.json$', 'alt1/transcriber/appconfig.json'),
+		(r'^/alt1/rocksconfig.json$', 'alt1/rocks/rocksconfig.json'),
+	],
+	'image/png': [
+		(r'^/alt1/transcribe/RSWikiIcon.png$', 'alt1/transcriber/RSWikiIcon.png'),
+		(r'^/alt1/nischeckbox.png$', 'alt1/nischeckbox.png'),
+		(r'^/alt1/nischeckbox-checked.png$', 'alt1/nischeckbox-checked.png'),
+		(r'^/rsw.png$', 'rsw.png'),
+		(r'^/osrsw.png$', 'osrsw.png'),
+		(r'^/wowee.png$', 'wowee.png'),
+		(r'^/meta.png$', 'meta.png'),
+		(r'^/rsc.png$', 'rsc.png'),
+		(r'^/rsptbr.png$', 'rsptbr.png'),
+		(r'^/glorp.png$', 'glorp.png'),
+		(r'^/weirdglorp.png$', 'weirdglorp.png')
 	]
 }
+
+
 INDSORT = orjson.OPT_APPEND_NEWLINE|orjson.OPT_INDENT_2|orjson.OPT_SORT_KEYS
 def inputhtmlsafe(s):
 	return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace(u'\xa0', ' ')
@@ -66,6 +95,10 @@ rscache_maxids = {}
 application = Router()
 # shortcut, so we can do @r()
 r = application.route
+
+# sqlite connections
+navbox_con = sqlite3.connect('/tools/gazproj/navbox_tracking.sqlite')
+sidebar_con = sqlite3.connect('/tools/gazproj/sidebar_tracking.sqlite')
 
 # open a file with utf-8 encoding
 # (str filename, str open type) => filehandle
@@ -173,6 +206,7 @@ def reloadRSCache():
 		if type(v) == dict:
 			rscache_data['items'].get(v['item_id'], {})['examine'] = v['desc']
 	makeDiffHtmls()
+	infobox.load_configs()
 
 # generator to read a file in chunks, reduce memory overhead of reading a file
 # (file handle)*=>bytes
@@ -186,19 +220,24 @@ def filechunks(fd):
 # serve a static file
 # (start response object, string, string) => bytes
 def serve_file(start_response, filepath, mime):
+	ctype = [('Content-Type', mime)]
+	if filepath.startswith('alt1/'):
+		ctype.append(('Access-Control-Allow-Origin', '*'))
 	try:
 		with open(filepath, 'rb') as f:
-			start_response('200 OK', [('Content-Type', mime)])
-			return filechunks(f)
+			start_response('200 OK', ctype)
+			for ch in filechunks(f):
+				yield ch
 	except:
-		start_response('404 NOT FOUND', [('Content-Type', mime)])
-		return '404 NOT FOUND'.encode('utf-8')
+		start_response('404 NOT FOUND', ctype)
+		yield '404 NOT FOUND'.encode('utf-8')
 
 # setup a static file, adding the route to the router
 # (regexstr, str, str) => void
 def static_file(route, filepath, mime):
 	def serve(env, resp):
-		yield serve_file(resp, filepath, mime)
+		for ch in serve_file(resp, filepath, mime):
+			yield ch
 	regex = re.compile(pat)
 	application.rules.append(((regex, ['GET'], serve),(pat,)))
 
@@ -333,7 +372,7 @@ MRDB_RXS = {
 	'recent': recomp(r'recent(\d+)', IGNORECASE),
 	'enum': recomp(r'enum(\d+)', IGNORECASE)
 }
-@r('^/mrdb/get$')
+@r(r'^/mrdb/get$')
 def route_mrdb_get(env,resp):
 	qs = parse_qs(env.get('QUERY_STRING',''))
 	qs_db = qs.get('db')
@@ -411,7 +450,6 @@ def route_mrdb_get(env,resp):
 	resp('200 OK', [('Content-Type', 'application/json')])
 	return orjson.dumps(out)
 
-
 # mr[ion]d/detail body - this part is standard
 # (str body, str title, int id, str name) => str
 def mrdb_detail_body(body,title,i,name):
@@ -442,7 +480,7 @@ def mrdb_detail_body(body,title,i,name):
 		</body>
 	</html>'''.format(title=title, body=body, id=i, item_name=name, id_prev=i-1, id_next=i+1)
 
-@r('^/mrid/detail')
+@r(r'^/mrid/detail')
 def route_mrid_detail(env, resp):
 	qs = parse_qs(env.get('QUERY_STRING',''))
 	i = qs.get('id')
@@ -492,7 +530,7 @@ def route_mrid_detail(env, resp):
 	start_response('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
 	return mrdb_detail_body(out,title,t,name_str)
 
-@r('^/mrnd/detail')
+@r(r'^/mrnd/detail')
 def route_mrnd_detail(env, resp):
 	qs = parse_qs(env.get('QUERY_STRING',''))
 	i = qs.get('id')
@@ -540,7 +578,7 @@ def route_mrnd_detail(env, resp):
 	start_response('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
 	return mrdb_detail_body(out,title,t,name_str)
 
-@r('^/mrod/detail')
+@r(r'^/mrod/detail')
 def route_mrod_detail(env, resp):
 	qs = parse_qs(env.get('QUERY_STRING',''))
 	i = qs.get('id')
@@ -583,7 +621,8 @@ def route_mrod_detail(env, resp):
 @r(r'^/icons/png/\d{1,5}\.png$')
 def route_icons_png(env, resp):
 	path = '/home/gaz/iteminfobox/inventory/'+ env.get('PATH_INFO')[1:]
-	return serve_file(resp,path,'image/png')
+	for ch in serve_file(resp, path, 'image/png'):
+		yield ch
 
 @r(r'^/recipe/\d+$')
 def route_recipe(env, resp):
@@ -614,7 +653,7 @@ def route_gazbot_rceplog(env, resp):
 		</body>
 		</html>'''.format(txt)
 		resp('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
-		return html
+		return html.encode('utf-8')
 
 @r(r'^/gazbot/rcep_whitelist\.txt$')
 def route_gazbot_rcepwhitelist(environ, start_response):
@@ -629,11 +668,12 @@ def route_gazbot_rcepwhitelist(environ, start_response):
 		</body>
 		</html>'''.format(txt)
 		resp('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
-		return html
+		return html.encode('utf-8')
 
 @r(r'^/img/.*?\.png$')
 def route_imgs_folder(env, resp):
-	return serve_file(resp, env.get('PATH_INFO')[1:], 'image/png')
+	for ch in serve_file(resp, env.get('PATH_INFO')[1:], 'image/png'):
+		yield ch
 
 @r(r'^/cache/tabulate/get$')
 def route_cache_tabulate_get(env, resp):
@@ -658,18 +698,153 @@ def route_cache_tabulate_get(env, resp):
 	s = filter(lambda x: len(x)>0, map(lambda x: x.strip(), s))
 	outname = tabulate.main(cache, s, v)
 	fname = outname.strip()
-	with open('/tools/gazproj/tabulatefiles/{}.json'.format(fname), 'r') as f:
+	with open('tabulatefiles/{}.json'.format(fname), 'r') as f:
 		resp('200 OK', [('Content-Type', 'application/json')])
 		return f.read()
 
 @application.route('/cache/tabulate/download')
 def route_cache_tabulate_download(env, resp):
-    query = env.get('QUERY_STRING')
-    query = parse_qs(query)
-    fname = query.get('file', [])
-    if len(fname) == 0:
-        resp('404 NOT FOUND', [('Content-Type', 'text/plain')])
-        return
-    fname = fname[0]
-    with open('/tools/gazproj/tabulatefiles/{}.tsv'.format(fname), 'r') as f:
-        return serve_file(resp, f'/tools/gazproj/tabulatefiles/{fname}.tsv', 'text/plain')
+	query = env.get('QUERY_STRING')
+	query = parse_qs(query)
+	fname = query.get('file', [])
+	if len(fname) == 0:
+		resp('404 NOT FOUND', [('Content-Type', 'text/plain')])
+		return ''
+	fname = fname[0]
+	for ch in serve_file(resp, f'/tools/gazproj/tabulatefiles/{fname}.tsv', 'text/plain'):
+		yield ch
+
+
+def track_postdata_helper(obj, key, index=0):
+	x = obj.get(key)
+	if x is None or type(x) != list:
+		return None
+	if len(x) < index+1:
+		return None
+	return x[index]
+
+allowed_track_wikis = (
+	'en_rswiki',
+	'en_osrswiki',
+	'en_rscwiki',
+	'en_rsdwwiki',
+	'pt_rswiki',
+	'en_rsmetawiki'
+)
+allowed_referer = (
+	'runescape.wiki',
+	'oldschool.runescape.wiki',
+	'classic.runescape.wiki',
+	'dragonwilds.runescape.wiki',
+	'pt.runescape.wiki',
+	'meta.runescape.wiki',
+)
+def is_rsw(environ):
+	try:
+		ref = environ.get('HTTP_REFERER')
+		if ref is not None:
+			refurl = urlsplit(ref)
+			return refurl.netloc in allowed_referer
+	except:
+		pass
+	return True #just to be safe
+
+@r(r'^/track/navbox$', methods=['POST'])
+def route_track_navbox(env, resp):
+	if not is_rsw(env):
+		resp('403 FORBIDDEN', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
+		return b'{"success":false, "reason": "wiki not allowed"}'
+	raw_data = env.get('wsgi.input').read()
+	try:
+		post_data = urlparse.parse_qs(raw_data)
+		pagename = track_postdata_helper(post_data, 'page', 0)
+		navbox = track_postdata_helper(post_data, 'navbox', 0)
+		href = track_postdata_helper(post_data, 'link', 0)
+		wiki = track_postdata_helper(post_data, 'wiki', 0)
+		link_type = track_postdata_helper(post_data, 'type', 0)
+		click_type = track_postdata_helper(post_data, 'click', 0)
+		t = time()
+		if wiki not in allowed_track_wikis:
+			resp('403 FORBIDDEN', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
+			return b'{"success":false, "reason": "wiki not allowed"}'
+		if pagename is None or navbox is None or href is None or link_type is None or click_type is None:
+			start_response('500 ERROR', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
+			return orjson.dumps({'sucess':False, 'raw_data':raw_data, 'parsed_data': post_data, 'reason': 'required field is none'})
+		navbox_con.execute('INSERT INTO clicks (timestamp, page_name, navbox_name, link_href, link_type, click_type, wiki) VALUES (?, ?, ?, ?, ?, ?, ?)', (t, pagename, navbox, href, link_type, click_type, wiki))
+		navbox_con.commit()
+		resp('200 OK', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
+		#print('NAVBOX Added {} to sqlite'.format(raw_data))
+		return b'{"success":true}'
+
+	except Exception as e:
+		resp('500 ERROR', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
+		#print('NAVBOX failed on {}'.format(raw_data))
+		return orjson.dumps({'sucess':False, 'raw_data':raw_data, 'reason': str(e)})
+	
+@r(r'^/track/sidebar$', methods=['POST'])
+def route_track_sidebar(env, resp):
+	if not is_rsw(env):
+		resp('403 FORBIDDEN', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
+		return b'{"success":false, "reason": "wiki not allowed"}'
+	raw_data = environ.get('wsgi.input').read()
+	try:
+		post_data = urlparse.parse_qs(raw_data)
+		pagename = track_postdata_helper(post_data, 'page', 0)
+		wiki = track_postdata_helper(post_data, 'wiki', 0)
+		href = track_postdata_helper(post_data, 'link', 0)
+		click_type = track_postdata_helper(post_data, 'click', 0)
+		t = time()
+		if wiki not in allowed_track_wikis:
+			resp('403 FORBIDDEN', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
+			return b'{"success":false, "reason": "wiki not allowed"}'
+		if pagename is None or wiki is None or href is None or click_type is None:
+			resp('500 ERROR', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
+			return orjson.dumps({'sucess':False, 'raw_data':raw_data, 'parsed_data': post_data, 'reason': 'required field is none'})
+		sidebar_con.execute('INSERT INTO clicks (timestamp, page_name, link_href, click_type, wiki) VALUES (?, ?, ?, ?, ?)', (t, pagename, href, click_type, wiki))
+		sidebar_con.commit()
+		start_response('200 OK', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
+		#print('SIDEBAR Added {} to sqlite'.format(raw_data))
+		return b'{"success":true}'
+
+	except Exception as e:
+		resp('500 ERROR', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
+		#print('SIDEBAR failed on {}, error {}'.format(raw_data, str(e)))
+		return orjson.dumps({'sucess':False, 'raw_data':raw_data, 'reason': str(e)})
+
+
+@r(r'^/alt1/imgs/[A-Za-z ]+\.png$')
+def route_alt1_imgs(env, resp):
+	filename = env.get('PATH_INFO')[11:]
+	for ch in serve_file(resp, f'alt1/constructioncontracts/{filename}', 'image/png'):
+		yield ch
+
+@r(r'^/alt1/contracts/data$', methods=['POST'])
+def route_alt1_submit(env, resp):
+	try:
+		body = json.loads(environ.get('wsgi.input').read())
+		with open('/home/gaz/alt1stuff/constructioncontractsinfo.txt', 'a') as f:
+			f.write('\n{}\t{}\t{}'.format(time(), body.get('location', '@missing@'), ','.join(body.get('furniture', ['@missing@'])) ))
+			resp('200 OK', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
+			return b'{"success":true}'
+	except:
+		pass
+	resp('400', [('Content-Type', 'application/json')])
+	return  b'{"success":false}'
+
+@r(r'^/pkmn/[A-Za-z0-9_\-]+\.(png|jpg)$')
+def route_pkmn_images(env, resp):
+	imgpath = f'img/{env.get("PATH_INFO")}'
+	mime = 'image/png'
+	if imgpath[:-3] == 'jpg':
+		mime = 'image/jpeg'
+	for ch in serve_file(resp, imgpath, mime):
+		yield ch	
+
+@r(r"^/test$", methods=['GET','POST'])
+def route_test(env, resp):
+	body = [ '%s: %s' %(k,v) for k,v in sorted(env.items()) ]
+	body.append('parsed_query_string: %s' % parse_qs(env.get('QUERY_STRING')))
+	body = '\n'.join(body)
+	body = f'<pre>{body}</pre>'
+	resp('200 OK', [('Content-Type', 'text/html')])
+	return body.encode('utf-8')

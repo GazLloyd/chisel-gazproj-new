@@ -2,19 +2,7 @@ import orjson
 import sys
 import time
 
-skills_map = "attack defence strength constitution ranged prayer magic cooking woodcutting fletching fishing firemaking crafting smithing mining herblore agility thieving slayer farming runecrafting hunter construction summoning dungeoneering divination invention archaeology".split()
-
-
-def getCache(_t):
-	t = _t.strip().lower()
-	if t in ['items', 'npcs', 'structs', 'locations', 'enums', 'quests', 'achievements', 'dbrows', 'bestiary']:
-		js = []
-		with open(f'/home/gaz/rscache/{t}.json', 'r', encoding='utf-8') as f:
-			js = json.load(f)
-		return t, js
-	else:
-		return None, []
-
+skills_map = "attack defence strength constitution ranged prayer magic cooking woodcutting fletching fishing firemaking crafting smithing mining herblore agility thieving slayer farming runecrafting hunter construction summoning dungeoneering divination invention archaeology necromancy".split()
 
 def getField(entry, field):
 	field_split = field.split('.')

@@ -1,0 +1,308 @@
+<!doctype html>
+<html>
+	<head>
+		<title>Strange Rocks tracker</title>
+		<link rel="stylesheet" type="text/css" href="https://runeapps.org/nis/nis.css">
+		<!--<script type="text/javascript" src="https://runeapps.org/alt1lib.js"></script>
+		<script type="text/javascript" src="https://runeapps.org/runeappslib.js"></script>-->
+		<style>
+			.addtoalt1 > * {
+				font-size: 150%;
+				padding: 0.5em;
+			}
+			.addtoalt1 {
+				margin-bottom: 0.5em;
+			}
+
+			a {
+				color: var(--nis-col-url);
+			}
+			a:hover {
+				color: var(--nis-col-urlhover);
+			}
+			table#maintable td input[type="checkbox"] {
+				appearance:none;
+				background-image: url('./nischeckbox.png');
+				width: 16px;
+				height: 16px;
+				background-size: 16px;
+			}
+			table#maintable td input[type="checkbox"]:checked {
+				background-image: url('./nischeckbox-checked.png');
+			}
+			table#maintable td input[type="checkbox"]:hover {
+				filter: brightness(1.2);
+			}
+			table#maintable tr td.skill {
+				background-repeat:no-repeat;
+				background-size: 2em;
+				padding-left: 2em;
+				background-position-y: center;
+			}
+			table#maintable tr td.strange, table#maintable tr td.golden {
+				background-repeat:no-repeat;
+				background-size: auto;
+				padding-left: 2em;
+				background-position-y: center;
+			}
+			table#maintable tr.done, table#maintable.allgold td.golden, table#maintable tr.done-golden td.golden, table#maintable tr.done-strange td.strange {
+				background-color: green;
+			}
+			table#maintable.allgold td.golden {
+				background-color: green;
+			}
+			table#maintable tr:not(.has_strange) td.strange, table#maintable tr:not(.has_gold) td.golden {
+    			background-color: rgba(0,0,0,0.4);
+			}
+			#maintable.goldenonly tr:not(.has_gold), #maintable.goldenonly tr.has_gold .strange {
+				display:none;
+			}
+			#maintable.strangeonly tr:not(.has_strange),  #maintable.strangeonly tr.has_strange .golden {
+				display:none;
+			}
+			.resetButton {
+				width: 5em;
+				margin-top: 0.5em;
+			}
+			@media screen and (max-height:760px) {
+				body.nis {
+					overflow-y:scroll !important;
+				}
+			}
+			@keyframes glowing {
+				from, to {
+					filter:brightness(1);
+				}
+				50% {
+					filter: brightness(2);
+				}
+			}
+
+			table#maintable.allgold .golden, table#maintable.allstrange .strange {
+				background-color: green;
+				animation:glowing;
+				animation-duration: 2s;
+				animation-iteration-count: infinite;
+			}
+		</style>
+		<script>
+			const data = [
+				{skill:'Agility', s:true, g:true},
+				{skill:'Construction', s:true, g:true},
+				{skill:'Cooking', s:true, g:false},
+				{skill:'Crafting', s:true, g:true},
+				{skill:'Divination', s:false, g:true},
+				{skill:'Dungeoneering', s:false, g:true},
+				{skill:'Farming', s:true, g:true},
+				{skill:'Firemaking', s:true, g:false},
+				{skill:'Fishing', s:true, g:false},
+				{skill:'Fletching', s:true, g:false},
+				{skill:'Herblore', s:true, g:true},
+				{skill:'Hunter', s:true, g:false},
+				{skill:'Magic', s:false, g:true},
+				{skill:'Melee', s:false, g:true, img:'Attack'},
+				{skill:'Mining', s:true, g:true},
+				{skill:'Prayer', s:false, g:true},
+				{skill:'Ranged', s:false, g:true},
+				{skill:'Runecrafting', s:true, g:false},
+				{skill:'Slayer', s:false, g:true},
+				{skill:'Smithing', s:true, g:true},
+				{skill:'Summoning', s:false, g:true},
+				{skill:'Thieving', s:true, g:false},
+				{skill:'Woodcutting', s:true, g:true}
+			];
+			let all_checkboxes = [];
+			const loadLS = () => {
+				let def = Object.fromEntries(data.map(v=>[v.skill, {s:false,g:false}]));
+				let ls = localStorage.getItem('rocks');
+				if (ls === null || ls === undefined) {
+					return def;
+				}
+				try {
+					return Object.assign(def, JSON.parse(ls));
+				} catch {
+					return def;
+				}
+			};
+			const checkboxEvent = () => {
+				let visible = document.getElementById('showrocks').value;
+				let tbl = document.getElementById('maintable');
+				let lsdata = {};
+				let allgold=true, allstrange=true;
+				for (let sk of data) {
+					let r = tbl.querySelector(`tr.${sk.skill}`);
+					let isDone = true;
+					lsdata[sk.skill] = {s:sk.s, g:sk.g};
+					if (sk.s) {
+						let ischecked = r.querySelector('td.strange input[type="checkbox"]').checked;
+						r.classList.toggle('done-strange', ischecked)
+						if (!ischecked && visible !== 'goldenonly') {
+							isDone=false;
+							lsdata[sk.skill].s = false;
+							allstrange=false;
+						}
+					}
+					if (sk.g) {
+						let ischecked = r.querySelector('td.golden input[type="checkbox"]').checked;
+						r.classList.toggle('done-golden', ischecked)
+						if (!ischecked && visible !== 'strangeonly') {
+							isDone=false;
+							lsdata[sk.skill].g = false;
+							allgold=false;
+						}
+					}
+					r.classList.toggle('done', isDone);
+				}
+				tbl.classList.toggle('allstrange', allstrange);
+				tbl.classList.toggle('allgold', allgold);
+				localStorage.setItem('rocks', JSON.stringify(lsdata));
+			};
+			const resetResetButton = (ev) => {
+				if (ev !== undefined && ev !== null && ev.target.classList.contains('resetButton')) return;
+				document.querySelectorAll('button.resetButton').forEach(e=>{
+					let rock = e.getAttribute('data-rock');
+					e.setAttribute('data-state', '0');
+					e.title = `Reset ${rock} rock checkboxes to unchecked`;
+					e.innerText = 'Reset '+(rock);
+				});
+				document.body.removeEventListener('click', resetResetButton);
+			};
+
+			const init = ()=>{
+				let ls = loadLS();
+				let tbl = document.getElementById('maintable');
+				let css = document.createElement('style');
+				for (let sk of data) {
+					let tr = document.createElement('tr'),
+						skill = document.createElement('td'),
+						strange = document.createElement('td'),
+						gold = document.createElement('td');
+
+					tr.classList.add(sk.skill);
+					skill.append(sk.skill);
+					skill.classList.add('skill');
+					strange.classList.add('strange');
+					gold.classList.add('golden');
+					css.innerHTML += `\ntable#maintable tr.${sk.skill} td.skill { background-image:url("https://runescape.wiki/images/${sk.img ? sk.img : sk.skill}.png"); }`;
+					if (sk.s) {
+						tr.classList.add('has_strange');
+						let check = document.createElement('input');
+						check.setAttribute('type', 'checkbox');
+						check.checked = ls[sk.skill].s;
+						all_checkboxes.push(check);
+						strange.append(check);
+
+						strange.addEventListener('click', (ev)=>{
+							if (ev.target === check) {
+								return;
+							}
+							check.checked = !check.checked;
+							checkboxEvent();
+						});
+						check.addEventListener('change', checkboxEvent);
+						css.innerHTML += `table#maintable tr.${sk.skill} td.strange { background-image:url("https://runescape.wiki/images/Strange_rock_(${sk.skill}).png"); }`;
+					}
+					if (sk.g) {
+						tr.classList.add('has_gold');
+						let check = document.createElement('input');
+						check.setAttribute('type', 'checkbox');
+						check.checked = ls[sk.skill].g;
+						all_checkboxes.push(check);
+						gold.append(check);
+
+						gold.addEventListener('click', (ev)=>{
+							if (ev.target === check) {
+								return;
+							}
+							check.checked = !check.checked;
+							checkboxEvent();
+						});
+						check.addEventListener('change', checkboxEvent);
+						css.innerHTML += `table#maintable tr.${sk.skill} td.golden { background-image:url("https://runescape.wiki/images/Golden_rock_(${sk.skill}).png"); }`;
+					}
+
+					tr.append(skill, strange, gold);
+					tbl.append(tr);
+				}
+				document.head.append(css);
+				let visible = document.getElementById('showrocks');
+				const visibleevent = ()=>{
+					['strangeonly', 'goldenonly', 'both'].forEach(v=>tbl.classList.toggle(v, v === visible.value));
+					localStorage.setItem('visible', visible.value);
+					checkboxEvent();
+				};
+				visible.addEventListener('change', visibleevent);
+				visible.value = localStorage.getItem('visible') === null ? 'both' : localStorage.getItem('visible');
+				visibleevent();
+
+				const resetEvent = (event)=>{
+					let t = event.target;
+					let rocks = t.getAttribute('data-rock');
+					switch (t.getAttribute('data-state')) {
+						case '0':
+							t.innerText = "Really reset? Can't be undone!";
+							t.title = "Click again to reset, click elsewhere to cancel";
+							document.body.addEventListener('click', resetResetButton);
+							t.setAttribute('data-state', '1');
+							break;
+						case '1':
+							t.innerText = 'Resetting...';
+							t.title = '';
+							all_checkboxes.forEach(c => {
+								if (rocks == 'all' || c.parentElement.classList.contains(rocks)) {
+									c.checked = false;
+								}
+							});
+							checkboxEvent();
+							resetResetButton();
+							break;
+					}
+				};
+				document.getElementById('resetAll').addEventListener('click', resetEvent);
+				document.getElementById('resetStrange').addEventListener('click', resetEvent);
+				document.getElementById('resetGolden').addEventListener('click', resetEvent);
+				if(window.alt1 && alt1.versionint>1001000) {
+					console.log('we are in alt1')
+					alt1.identifyAppUrl("rocksconfig.json");
+				} else {
+					let wrap = document.createElement('div');
+					let a = document.createElement('a');
+					a.href = 'alt1://addapp/https://chisel.weirdgloop.org/gazproj/alt1/rocksconfig.json';
+					a.innerText = 'Click here to open this app in alt1.';
+					a.target = '_blank';
+					let b = document.createElement('span');
+					b.innerText = 'Or click here to hide this message and continue in the browser.';
+					b.addEventListener('click', ()=>{
+						wrap.style.display = 'none';
+					})
+					wrap.classList.add('addtoalt1');
+					wrap.append(a,b);
+					document.body.prepend(wrap);
+				}
+			};
+			window.addEventListener('load', init);
+		</script>
+	</head>
+	<body class="nis">
+		<div>
+			<label for="showrocks">Show:</label>
+			<select class="nisdropdown" name="showrocks" id="showrocks">
+				<option value="both">Both</option>
+				<option value="strangeonly">Strange only</option>
+				<option value="goldenonly">Golden only</option>
+			</select>
+		</div>
+		<table id="maintable" class="nistable">
+			<tr class="headerrow has_strange has_gold">
+				<th>Skill</th>
+				<th class="strange">Strange</th>
+				<th class="golden">Golden</th>
+			</tr>
+		</table>
+		<div>
+			<button id="resetStrange" data-state="0" data-rock="strange" title="Reset strange rock checkboxes to unchecked" class="resetButton">Reset strange</button>
+			<button id="resetGolden" data-state="0" data-rock="golden" title="Reset golden rock checkboxes to unchecked" class="resetButton">Reset golden</button>
+			<button id="resetAll" data-state="0" data-rock="all" title="Reset all checkboxes to unchecked" class="resetButton">Reset all</button>
+		</div>
+	</body>
+</html>
