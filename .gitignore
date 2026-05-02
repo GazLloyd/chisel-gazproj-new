@@ -9,9 +9,11 @@ __pycache__/
 *.sqlite
 tabulatefiles
 
-# generated at runtime
+# generated
 html/cache.html
 html/index.html
+html/plzashiny.html
+html/box9guide.html
 
 #symlinks
 alt1/constructioncontracts
