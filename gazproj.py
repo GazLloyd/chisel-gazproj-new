@@ -22,59 +22,81 @@ CHUNKSIZE=1024*1024
 # dict[mimetype, list[tuple[route,filepath]]]
 STATIC_SERVES = {
 	'text/html; charset=utf-8': [
-		(r'^/$', 'html/index.html'), # homepage
-		(r'^/mrid/?$', 'html/mrid.html'), #mrdbs
-		(r'^/mrod/?$', 'html/mrod.html'), #mrdbs
-		(r'^/mrnd/?$', 'html/mrnd.html'), #mrdbs
-		(r'^/usercontribsdiff/?$', 'html/usercontribsdiff.html'),
-		(r'^/datasrc/?$', 'html/datasrcrender.html'),
-		(r'^/tally/?$', 'html/tally.html'),
-		(r'^/gazbot/?$', 'html/gazbot.html'),
-		(r'^/recipe/?$', 'html/recipe.html'),
-		(r'^/cache/?$', 'html/cache.html'),
-		(r'^/cache/tabulate/?$', 'html/tabulate.html'),
-		(r'^/alt1/timers(\.html)?$', 'alt1/timer/timer.html'),
-		(r'^/alt1/contracts(\.html)?$', 'alt1/constructioncontracts/contracts.html'),
-		(r'^/alt1/rocks(\.html)?$', 'alt1/rocks/rocks.html'),
-		(r'^/alt1/transcribe(\.html|/transcriber2\.html|/index\.html)?$', 'alt1/transcriber/index.html'),
-		(r'^/pkmn/gs$', 'html/pkmn.html'),
-		(r'^/pkmn/box9(guide)?(\.html)?$', 'html/box9guide.html'),
-		(r'^/pkmn/plza(shiny)?(\.html)?$', 'html/plzashiny.html')
+		('/', 'html/index.html'), # homepage
+		('/mrid', 'html/mrid.html'), #mrdbs
+		('/mrod', 'html/mrod.html'), #mrdbs
+		('/mrnd', 'html/mrnd.html'), #mrdbs
+		('/usercontribsdiff', 'html/usercontribsdiff.html'),
+		('/datasrc', 'html/datasrcrender.html'),
+		('/tally', 'html/tally.html'),
+		('/gazbot', 'html/gazbot.html'),
+		('/recipe', 'html/recipe.html'),
+		('/cache', 'html/cache.html'),
+		('/cache/tabulate', 'html/tabulate.html'),
+		('/alt1/timers', 'alt1/timer/timer.html'),
+		('/alt1/contracts', 'alt1/constructioncontracts/contracts.html'),
+		('/alt1/rocks', 'alt1/rocks/rocks.html'),
+		('/alt1/transcribe', 'alt1/transcriber/index.html'),
+		('/pkmn/gs', 'html/pkmn.html'),
+		('/pkmn/box9', 'html/box9guide.html'),
+		('/pkmn/plza', 'html/plzashiny.html')
 	],
 	'text/css': [
-		(r'^/styles.css$', 'styles/styles.css'),
-		(r'^/mrid.css$', 'styles/styles.css'),
-		(r'^/pkmn.css$', 'styles/pkmn.css'),
+		('/styles.css', 'styles/styles.css'),
+		('/mrid.css', 'styles/styles.css'),
+		('/pkmn.css', 'styles/pkmn.css'),
 	],
 	'text/javascript': [
-		(r'^/mrdbs.js$', 'js/mrdbs.js'),
-		(r'^/alt1/contracts/contracts.bundle.js$', 'alt1/constructioncontracts/index.bundle.js'),
-		(r'^/alt1/transcribe/main.js$', 'alt1/transcriber/main.js'),
+		('/mrdbs.js', 'js/mrdbs.js'),
+		('/alt1/contracts/contracts.bundle.js', 'alt1/constructioncontracts/index.bundle.js'),
+		('/alt1/transcribe/main.js', 'alt1/transcriber/main.js'),
 	],
 	'application/json': [
-		(r'^/gazbot/status_rs(\.json)?$', '/home/gaz/gazgebot/GazGEBot/config/rs_ge.json'),
-		(r'^/gazbot/status_os(\.json)?$', '/home/gaz/gazgebot/GazGEBot/config/os_ge.json'),
-		(r'^/gazbot/rs_dump.json$', '/home/gaz/gazgebot/GazGEBot/rs_dump.json'),
-		(r'^/gazbot/os_dump.json$', '/home/gaz/gazgebot/GazGEBot/os_dump.json'),
-		(r'^/alt1/timerconfig.json$', 'alt1/timer/timerconfig.json'),
-		(r'^/alt1/contractsconfig.json$', 'alt1/constructioncontracts/contractsconfig.json'),
-		(r'^/alt1/transcribe/appconfig.json$', 'alt1/transcriber/appconfig.json'),
-		(r'^/alt1/rocksconfig.json$', 'alt1/rocks/rocksconfig.json'),
+		('/gazbot/status_rs', '/home/gaz/gazgebot/GazGEBot/config/rs_ge.json'),
+		('/gazbot/status_os', '/home/gaz/gazgebot/GazGEBot/config/os_ge.json'),
+		('/gazbot/rs_dump.json', '/home/gaz/gazgebot/GazGEBot/rs_dump.json'),
+		('/gazbot/os_dump.json', '/home/gaz/gazgebot/GazGEBot/os_dump.json'),
+		('/alt1/timerconfig.json', 'alt1/timer/timerconfig.json'),
+		('/alt1/contractsconfig.json', 'alt1/constructioncontracts/contractsconfig.json'),
+		('/alt1/transcribe/appconfig.json', 'alt1/transcriber/appconfig.json'),
+		('/alt1/rocksconfig.json', 'alt1/rocks/rocksconfig.json'),
 	],
 	'image/png': [
-		(r'^/alt1/transcribe/RSWikiIcon.png$', 'alt1/transcriber/RSWikiIcon.png'),
-		(r'^/alt1/nischeckbox.png$', 'alt1/nischeckbox.png'),
-		(r'^/alt1/nischeckbox-checked.png$', 'alt1/nischeckbox-checked.png'),
-		(r'^/rsw.png$', 'img/rsw.png'),
-		(r'^/osrsw.png$', 'img/osrsw.png'),
-		(r'^/wowee.png$', 'img/wowee.png'),
-		(r'^/meta.png$', 'img/meta.png'),
-		(r'^/rsc.png$', 'img/rsc.png'),
-		(r'^/rsptbr.png$', 'img/rsptbr.png'),
-		(r'^/glorp.png$', 'img/glorp.png'),
-		(r'^/weirdglorp.png$', 'img/weirdglorp.png')
+		('/alt1/transcribe/RSWikiIcon.png', 'alt1/transcriber/RSWikiIcon.png'),
+		('/alt1/nischeckbox.png', 'alt1/nischeckbox.png'),
+		('/alt1/nischeckbox-checked.png', 'alt1/nischeckbox-checked.png'),
+		('/rsw.png', 'img/rsw.png'),
+		('/osrsw.png', 'img/osrsw.png'),
+		('/wowee.png', 'img/wowee.png'),
+		('/meta.png', 'img/meta.png'),
+		('/rsc.png', 'img/rsc.png'),
+		('/rsptbr.png', 'img/rsptbr.png'),
+		('/glorp.png', 'img/glorp.png'),
+		('/weirdglorp.png', 'img/weirdglorp.png')
 	]
 }
+
+# list of routes that return a 301 redirect to another page
+REDIRECT_301s = [
+	(r'^/mrid/$', '/gazproj/mrid'),
+	(r'^/mrnd/$', '/gazproj/mrnd'),
+	(r'^/mrod/$', '/gazproj/mrod'),
+	(r'^/usercontribsdiff/$', '/gazproj/usercontribsdiff'),
+	(r'^/datasrc/$', '/gazproj/datasrc'),
+	(r'^/tally/$', '/gazproj/tally'),
+	(r'^/gazbot/$', '/gazproj/gazbot'),
+	(r'^/recipe/$', '/gazproj/recipe'),
+	(r'^/cache/$', '/gazproj/cache'),
+	(r'^/cache/tabulate/$', '/gazproj/cache/tabulate'),
+	(r'^/alt1/timers\.html$', '/gazproj/alt1/timers'),
+	(r'^/alt1/contracts\.html$', '/gazproj/alt1/contracts'),
+	(r'^/alt1/rocks\.html$', '/gazproj/alt1/rocks'),
+	(r'^/alt1/transcribe(\.html|/transcriber2\.html|/index\.html)$', '/gazproj/alt1/transcribe'),
+	(r'^/gazbot/status_rs\.json$', '/gazproj/gazbot/status_rs'),
+	(r'^/gazbot/status_os\.json$', '/gazproj/gazbot/status_os'),
+	(r'^/pkmn/box9(guide|\.html|guide\.html)$', '/gazproj/box9'),
+	(r'^/pkmn/plza(shiny|\.html|shiny\.html)$', '/gazproj/pkmn/plza')
+]
 
 # override routenotfound behavoir - normally prints the entire attempt tree
 def return_empty(self):
@@ -260,19 +282,32 @@ def static_file(route, filepath, mime):
 	def serve(env, resp):
 		for ch in serve_file(resp, filepath, mime):
 			yield ch
-	regex = recomp(route)
+	regex = recomp('^'+route+'$')
 	application.rules.append(((regex, ['GET'], serve),(route,)))
+
+# setup a http 301, adding the route to the router
+# (regexstr, str) => void
+def http_301(route, redir_loc):
+	def send_301(env, resp):
+		resp('301 MOVED PERMANENTLY', [('Location', redir_loc)])
+		return b''
+	regex = recomp(route)
+	application.rules.append(((regex, ['GET'], send_301),(route,)))
 
 # set up the defined static serves
 for mimetype, fileroutes in STATIC_SERVES.items():
 	for route,filename in fileroutes:
 		static_file(route, filename, mimetype)
 
+# set up the redirects
+for route,filename in REDIRECT_301s:
+	http_301(route, filename)
+
 # setup cache serves
 for fn in RSCACHE_FILENAMES:
-	static_file(f'^/cache/{fn}.json$', f'{RSCACHE_FILEPATH}/{fn}.json', 'application/json') #cache file
-	static_file(f'^/cache/{fn}_diff.txt$', f'{RSCACHE_FILEPATH}/{fn}_diff.txt', 'text/plain') #cache diff as plaintext
-	static_file(f'^/cache/{fn}_diff.html$', f'{RSCACHE_FILEPATH}/{fn}_diff.html', 'text/html; charset=utf-8') #cache diff as html
+	static_file(f'/cache/{fn}.json', f'{RSCACHE_FILEPATH}/{fn}.json', 'application/json') #cache file
+	static_file(f'/cache/{fn}_diff.txt', f'{RSCACHE_FILEPATH}/{fn}_diff.txt', 'text/plain') #cache diff as plaintext
+	static_file(f'/cache/{fn}_diff.html', f'{RSCACHE_FILEPATH}/{fn}_diff.html', 'text/html; charset=utf-8') #cache diff as html
 
 # reload the cache
 reloadRSCache()
@@ -946,3 +981,7 @@ def route_test(env, resp):
 	resp('200 OK', [('Content-Type', 'text/html'), ('Access-Control-Allow-Origin', '*')])
 	return body.encode('utf-8')
 
+@r(r'^/gazbot/(os|rs)_dump\.json\d{1,6}\.json$')
+def route_bad_dump(env,resp):
+	resp('400 BAD REQUEST', [])
+	return b''
