@@ -2,17 +2,18 @@
 import os
 import sys
 import orjson
-from time import strftime, gmtime
+from time import strftime, gmtime, time
 from urllib.parse import parse_qs, urlsplit
 from re import compile as recomp, IGNORECASE
 import sqlite3
 
 # custom imports
 sys.path.append('/tools/gazproj/') # make sure this is on PATH
-from wsgirouter import Router
+os.chdir('/tools/gazproj')
+print('current working directory', os.getcwd())
+from wsgirouter import Router, RouteNotFound
 import tabulate
-import infobox
-
+#import infobox
 # maximum size of a chunk to read when serving static files
 # int
 CHUNKSIZE=1024*1024
@@ -30,23 +31,24 @@ STATIC_SERVES = {
 		(r'^/tally/?$', 'html/tally.html'),
 		(r'^/gazbot/?$', 'html/gazbot.html'),
 		(r'^/recipe/?$', 'html/recipe.html'),
-		(r'^/cache/?$', 'html/.html'),
+		(r'^/cache/?$', 'html/cache.html'),
 		(r'^/cache/tabulate/?$', 'html/tabulate.html'),
 		(r'^/alt1/timers(\.html)?$', 'alt1/timer/timer.html'),
-		(r'^/alt1/contracts(\.html)?$', 'alt1/timer/timer.html'),
+		(r'^/alt1/contracts(\.html)?$', 'alt1/constructioncontracts/contracts.html'),
 		(r'^/alt1/rocks(\.html)?$', 'alt1/rocks/rocks.html'),
 		(r'^/alt1/transcribe(\.html|/transcriber2\.html|/index\.html)?$', 'alt1/transcriber/index.html'),
-		(r'^/pkmn/gs', 'html/pkmn.html'),
-		(r'^/pkmn/box9(guide)?(\.html)?', 'html/box9guide.html'),
-		(r'^/pkmn/plza(shiny)?(\.html)?', 'html/plzashiny.html')
+		(r'^/pkmn/gs$', 'html/pkmn.html'),
+		(r'^/pkmn/box9(guide)?(\.html)?$', 'html/box9guide.html'),
+		(r'^/pkmn/plza(shiny)?(\.html)?$', 'html/plzashiny.html')
 	],
 	'text/css': [
-		(r'^/styles.css$', 'css/styles.css'),
-		(r'^/pkmn.css$', 'css/pkmn.css'),
+		(r'^/styles.css$', 'styles/styles.css'),
+		(r'^/mrid.css$', 'styles/styles.css'),
+		(r'^/pkmn.css$', 'styles/pkmn.css'),
 	],
 	'text/javascript': [
-		(r'^mrdbs.js$', 'js/mrdbs.js'),
-		(r'^/alt1/contracts.bundle.js$', 'alt1/constructioncontracts/contracts.bundle.js'),
+		(r'^/mrdbs.js$', 'js/mrdbs.js'),
+		(r'^/alt1/contracts/contracts.bundle.js$', 'alt1/constructioncontracts/index.bundle.js'),
 		(r'^/alt1/transcribe/main.js$', 'alt1/transcriber/main.js'),
 	],
 	'application/json': [
@@ -63,17 +65,21 @@ STATIC_SERVES = {
 		(r'^/alt1/transcribe/RSWikiIcon.png$', 'alt1/transcriber/RSWikiIcon.png'),
 		(r'^/alt1/nischeckbox.png$', 'alt1/nischeckbox.png'),
 		(r'^/alt1/nischeckbox-checked.png$', 'alt1/nischeckbox-checked.png'),
-		(r'^/rsw.png$', 'rsw.png'),
-		(r'^/osrsw.png$', 'osrsw.png'),
-		(r'^/wowee.png$', 'wowee.png'),
-		(r'^/meta.png$', 'meta.png'),
-		(r'^/rsc.png$', 'rsc.png'),
-		(r'^/rsptbr.png$', 'rsptbr.png'),
-		(r'^/glorp.png$', 'glorp.png'),
-		(r'^/weirdglorp.png$', 'weirdglorp.png')
+		(r'^/rsw.png$', 'img/rsw.png'),
+		(r'^/osrsw.png$', 'img/osrsw.png'),
+		(r'^/wowee.png$', 'img/wowee.png'),
+		(r'^/meta.png$', 'img/meta.png'),
+		(r'^/rsc.png$', 'img/rsc.png'),
+		(r'^/rsptbr.png$', 'img/rsptbr.png'),
+		(r'^/glorp.png$', 'img/glorp.png'),
+		(r'^/weirdglorp.png$', 'img/weirdglorp.png')
 	]
 }
 
+# override routenotfound behavoir - normally prints the entire attempt tree
+def return_empty(self):
+	return ''
+RouteNotFound.__str__ = return_empty
 
 INDSORT = orjson.OPT_APPEND_NEWLINE|orjson.OPT_INDENT_2|orjson.OPT_SORT_KEYS
 def inputhtmlsafe(s):
@@ -81,7 +87,7 @@ def inputhtmlsafe(s):
 
 # names of the cache files, without the rest of the filepath or .json
 # list[str]
-RSCACHE_FILENAMES = ['items', 'npcs', 'locations', 'structs', 'dbrows', 'enums', 'achievements', 'quests', 'params', 'versions', 'bestiary', 'alog']
+RSCACHE_FILENAMES = ['items', 'npcs', 'locations', 'structs', 'dbrows', 'enums', 'achievements', 'quests', 'versions', 'bestiary', 'alog']
 # directory of the cache files
 # str
 RSCACHE_FILEPATH = '/home/gaz/rscache' 
@@ -188,25 +194,41 @@ def makeDiffHtmls():
 			f_file = f'/home/gaz/gazgebot/GazGEBot/{f_name}_dump.json'
 			r = '<tr class="{fn}-ge"><td></td><td>{fn}</td><td><a href="https://chisel.weirdgloop.org/gazproj/gazbot/{fn}_dump.json" download>download</a></td><td><a href="https://chisel.weirdgloop.org/gazproj/gazbot/status_{fn}">status_{fn}</a></td></tr>'.format(fn=f_name)
 			gerows.append(r)
-		fout.write(ftemp.read().format(rows=rows,gerows=gerows))
+		fout.write(ftemp.read().format(rows='\n'.join(rows),gerows='\n'.join(gerows)))
 
 # reload the RS cache jsons & remake the html
 # () => void
 def reloadRSCache():
-	global rscache_data
+	global rscache_data, rscache_maxids
 	rscache_data = {}
 	rscache_maxids = {}
 	for fn in RSCACHE_FILENAMES:
-		rscache_data[fn] = {x['id']:x for x in loadjson(f'{RSCACHE_FILEPATH}/{fn}.json')}
-		rscache_maxids[fn] = max(rscache_data.keys())
-	rscache_data['alog'] = {x['item_id']:x for x in loadjson(f'{RSCACHE_FILEPATH}/alog.json')}
-	for i,v in loadjson(f'{RSCACHE_FILEPATH}/location_examines.json.json'):
-		rscache_data['locations'].get(i, {})['examine'] = v['examine']
-	for v in rscache_data['alog']:
+		if fn == 'versions':
+			rscache_data[fn] = loadjson(f'{RSCACHE_FILEPATH}/{fn}.json')
+			rscache_maxids[fn] = -1
+		else:
+			k = 'id'
+			is_alog = False
+			if fn == 'alog':
+				is_alog = True
+				k = 'item_id'
+			try:
+				rscache_data[fn] = {}
+				for x in loadjson(f'{RSCACHE_FILEPATH}/{fn}.json'):
+					if not is_alog or (is_alog and type(x) == dict):
+						rscache_data[fn][x[k]] = x
+			except Exception as e:
+				print(f'error loading {fn}.json')
+				raise e
+			rscache_maxids[fn] = max(rscache_data[fn].keys())
+	for x in loadjson(f'{RSCACHE_FILEPATH}/location_examines.json'):
+		i = x['id']
+		rscache_data['locations'].get(i, {})['examine'] = x['examine']
+	for v in rscache_data['alog'].values():
 		if type(v) == dict:
 			rscache_data['items'].get(v['item_id'], {})['examine'] = v['desc']
 	makeDiffHtmls()
-	infobox.load_configs()
+	#infobox.load_configs()
 
 # generator to read a file in chunks, reduce memory overhead of reading a file
 # (file handle)*=>bytes
@@ -238,8 +260,8 @@ def static_file(route, filepath, mime):
 	def serve(env, resp):
 		for ch in serve_file(resp, filepath, mime):
 			yield ch
-	regex = re.compile(pat)
-	application.rules.append(((regex, ['GET'], serve),(pat,)))
+	regex = recomp(route)
+	application.rules.append(((regex, ['GET'], serve),(route,)))
 
 # set up the defined static serves
 for mimetype, fileroutes in STATIC_SERVES.items():
@@ -319,6 +341,7 @@ def formatMRDB_items(vals):
 			ret[i] = str(cache.get(i, ''))
 
 		out.append(ret)
+	print('formatMRDB_items', len(vals), vals[0:5], len(out), out[0:5])
 	return out
 
 def formatMRDB_npcs(vals):
@@ -331,8 +354,8 @@ def formatMRDB_npcs(vals):
 			'examine': '',
 			'members': '',
 			'pet_item_id': cache.get('extra', {}).get('pet_item_id', ''),
-			'actions': stripNulls(cache.get('actions')),
-			'members_actions': stripNulls(cache.get('members_actions'))
+			'actions': stripNulls(cache.get('actions', [])),
+			'members_actions': stripNulls(cache.get('members_actions', []))
 		}
 
 		bestiary = rscache_data['bestiary'].get(cache.get('id'))
@@ -342,6 +365,7 @@ def formatMRDB_npcs(vals):
 			if bestiary.get('description') is not None:
 				ret['examine'] = bestiary.get('description')
 		out.append(ret)
+	print('formatMRDB_npcs', len(vals), vals[0:5], len(out), out[0:5])
 	return out
 
 def formatMRDB_locations(vals):
@@ -352,7 +376,7 @@ def formatMRDB_locations(vals):
 			'name': cache.get('name', ''),
 			'members': cache.get('isMembers', ''),
 			'examine': cache.get('examine', ''),
-			'actions': stripNulls(cache.get('actions'), []),
+			'actions': stripNulls(cache.get('actions', [])),
 			'members_actions': [],
 			'morphs_1': cache.get('morphs_1'),
 			'morphs_2': cache.get('morphs_2')
@@ -362,10 +386,27 @@ def formatMRDB_locations(vals):
 			if a is not None:
 				ret['members_actions'].append(a)
 		out.append(ret)
-	return ret
+	print('formatMRDB_locations', len(vals), vals[0:5], len(out), out[0:5])
+	return out
 
 
-ALLOWED_MRDBS = ['items', 'npcs', 'locations']
+def get_cmp_func(cmp_val):
+	cmp_v = cmp_val.lower()
+	def cmp(x):
+		return x.lower() == cmp_v
+	return cmp
+def get_regex_func(re_val):
+	print('making regex cmp func', re_val)
+	rx = recomp(re_val, IGNORECASE)
+	def cmp(x):
+		return rx.search(x) is not None
+	return cmp
+
+MRDB_FUNCS = {
+	'items': formatMRDB_items,
+	'npcs': formatMRDB_npcs,
+	'locations': formatMRDB_locations
+}
 MRDB_RXS = {
 	'id': recomp(r'(\d+)'),
 	'idrange': recomp(r'(\d+)([-+])(\d+)'),
@@ -374,9 +415,14 @@ MRDB_RXS = {
 }
 @r(r'^/mrdb/get$')
 def route_mrdb_get(env,resp):
+	global rscache_data, rscache_maxids
 	qs = parse_qs(env.get('QUERY_STRING',''))
 	qs_db = qs.get('db')
-	if qs_db not in ALLOWED_MRDBS:
+	if (not type(qs_db) == list) or len(qs_db) == 0:
+		resp('400 ERROR', [('Content-Type', 'application/json')])
+		return b'{"error":"invalid mrdb provided"}'
+	qs_db = qs_db[0]
+	if qs_db not in MRDB_FUNCS:
 		resp('400 ERROR', [('Content-Type', 'application/json')])
 		return b'{"error":"invalid mrdb provided"}'
 	queries = qs.get('q', [])
@@ -429,23 +475,16 @@ def route_mrdb_get(env,resp):
 		cmp = None
 		test = None
 		if q[0] == '/' and q[-1] == '/':
-			cmp = recomp(q[1:-1], IGNORECASE)
-			test = lambda x: rx.search(x) is not None
+			test = get_regex_func(q[1:-1])
 		else:
-			cmp = q.lower()
-			test = lambda x: x.lower() == cmp
+			test = get_cmp_func(q)
 		for i, val in db.items():
-			if test(val.get('name')):
+			if test(val.get('name', '')):
 				ret.append(val)
 
 	out = []
 	if len(ret)>0:
-		if qs_db == 'items':
-			out = formatMRIDrow(ret)
-		if qs_db == 'locations':
-			out = formatMRODrow(ret)
-		if qs_db == 'npcs':
-			out = formatMRNDrow(ret)
+		out = MRDB_FUNCS[qs_db](ret)
 	
 	resp('200 OK', [('Content-Type', 'application/json')])
 	return orjson.dumps(out)
@@ -478,7 +517,7 @@ def mrdb_detail_body(body,title,i,name):
 			document.querySelectorAll('.copy-config').forEach(el=>el.addEventListener('click', copyConfig));
 			</script>
 		</body>
-	</html>'''.format(title=title, body=body, id=i, item_name=name, id_prev=i-1, id_next=i+1)
+	</html>'''.format(title=title, body=body, id=i, item_name=name, id_prev=i-1, id_next=i+1).encode('utf-8')
 
 @r(r'^/mrid/detail')
 def route_mrid_detail(env, resp):
@@ -523,12 +562,12 @@ def route_mrid_detail(env, resp):
 				<td class="mrdb-detail-dii" style="text-align:center;"><a href="https://r2.weirdgloop.org/rs-render/dii/{id}.png" target="_blank" rel="noopener noreferrer"><img src="https://r2.weirdgloop.org/rs-render/dii/{id}.png" /></a></td>
 			</tr>
 		</table>'''.format(
-			id=t,
-			cache=cache_str,
-			alog=alog_str
+			id=i,
+			cache=cachestr,
+			alog=alogstr
 		)
-	start_response('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
-	return mrdb_detail_body(out,title,t,name_str)
+	resp('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
+	return mrdb_detail_body(out,title,i,name_str)
 
 @r(r'^/mrnd/detail')
 def route_mrnd_detail(env, resp):
@@ -571,12 +610,12 @@ def route_mrnd_detail(env, resp):
 				<td class="mrdb-detail-dii" style="text-align:center;"><a href="https://r2.weirdgloop.org/rs-render/npc/{id}.png" target="_blank" rel="noopener noreferrer"><img src="https://r2.weirdgloop.org/rs-render/npc/{id}.png" /></a></td>
 			</tr>
 		</table>'''.format(
-			id=t,
-			cache=cache_str,
-			bestiary=bestiary_str
+			id=i,
+			cache=cachestr,
+			bestiary=bestiarystr
 		)
-	start_response('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
-	return mrdb_detail_body(out,title,t,name_str)
+	resp('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
+	return mrdb_detail_body(out,title,i,name_str)
 
 @r(r'^/mrod/detail')
 def route_mrod_detail(env, resp):
@@ -612,11 +651,11 @@ def route_mrod_detail(env, resp):
 				<td class="mrdb-detail-dii" style="text-align:center;"><a href="https://r2.weirdgloop.org/rs-render/loc/{id}.png" target="_blank" rel="noopener noreferrer"><img src="https://r2.weirdgloop.org/rs-render/loc/{id}.png" /></a></td>
 			</tr>
 		</table>'''.format(
-			id=t,
-			cache=cache_str
+			id=i,
+			cache=cachestr
 		)
-	start_response('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
-	return mrdb_detail_body(out,title,t,name_str)
+	resp('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
+	return mrdb_detail_body(out,title,i,name_str)
 
 @r(r'^/icons/png/\d{1,5}\.png$')
 def route_icons_png(env, resp):
@@ -626,6 +665,8 @@ def route_icons_png(env, resp):
 
 @r(r'^/recipe/\d+$')
 def route_recipe(env, resp):
+	resp('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
+	return b'Sorry! This route currently not supported - coming soon!'
 	itemid = env.get('PATH_INFO')[8:]
 	infobox = make_recipe() #TODO
 	resp('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
@@ -656,7 +697,7 @@ def route_gazbot_rceplog(env, resp):
 		return html.encode('utf-8')
 
 @r(r'^/gazbot/rcep_whitelist\.txt$')
-def route_gazbot_rcepwhitelist(environ, start_response):
+def route_gazbot_rcepwhitelist(env, resp):
 	with open('/home/gaz/gazgebot/GazGEBot/config/rcmonitor_whitelist.txt', 'r') as f:
 		txt = f.read()
 		html = '''
@@ -682,25 +723,26 @@ def route_cache_tabulate_get(env, resp):
 	t = query.get('type', ['items'])[0]
 	t = t.lower().strip()
 	if t not in ['items', 'npcs', 'structs', 'locations', 'enums', 'quests', 'achievements', 'dbrows', 'bestiary']:
-		resp('400',[('Content-Type', 'application/json')])
+		resp('400 ERROR',[('Content-Type', 'application/json')])
 		return b'{"error": true, "message": "Invalid cache type"}'
 	cache = rscache_data[t]
 	s = query.get('search', [])
 	if len(s) == 0:
-		resp('400',[('Content-Type', 'application/json')])
+		resp('400 ERROR',[('Content-Type', 'application/json')])
 		return b'{"error": true, "message": "No search provided"}'
 	s = s[0].split(';')
+	v = ['id', 'name']
 	try:
-		v = query.get('view', [''])[0].split(';')
+		v.extend(query.get('view', [''])[0].split(';'))
 	except:
-		v = []
-	v = filter(lambda x: len(x)>0, map(lambda x: x.strip(), v))
-	s = filter(lambda x: len(x)>0, map(lambda x: x.strip(), s))
+		pass
+	v = list(filter(lambda x: len(x)>0, map(lambda x: x.strip(), v)))
+	s = list(filter(lambda x: len(x)>0, map(lambda x: x.strip(), s)))
+	print('tablating:',t,s,v)
 	outname = tabulate.main(cache, s, v)
 	fname = outname.strip()
-	with open('tabulatefiles/{}.json'.format(fname), 'r') as f:
-		resp('200 OK', [('Content-Type', 'application/json')])
-		return f.read()
+	for ch in serve_file(resp, f'/tools/gazproj/tabulatefiles/{fname}.json', 'application/json'):
+		yield ch
 
 @application.route('/cache/tabulate/download')
 def route_cache_tabulate_download(env, resp):
@@ -729,7 +771,29 @@ allowed_track_wikis = (
 	'en_rscwiki',
 	'en_rsdwwiki',
 	'pt_rswiki',
-	'en_rsmetawiki'
+	'en_rsmetawiki',
+
+	'en_mcwiki',
+	'cs_mcwiki',
+	'de_mcwiki',
+	'el_mcwiki',
+	'es_mcwiki',
+	'fr_mcwiki',
+	'hu_mcwiki',
+	'id_mcwiki',
+	'it_mcwiki',
+	'ja_mcwiki',
+	'ko_mcwiki',
+	'lzh_mcwiki',
+	'nl_mcwiki',
+	'pl_mcwiki',
+	'pt_mcwiki',
+	'pt-br_mcwiki',
+	'ru_mcwiki',
+	'th_mcwiki',
+	'tr_mcwiki',
+	'uk_mcwiki',
+	'zh_mcwiki'
 )
 allowed_referer = (
 	'runescape.wiki',
@@ -738,6 +802,28 @@ allowed_referer = (
 	'dragonwilds.runescape.wiki',
 	'pt.runescape.wiki',
 	'meta.runescape.wiki',
+
+	'minecraft.wiki',
+	'cs.minecraft.wiki',
+	'de.minecraft.wiki',
+	'el.minecraft.wiki',
+	'es.minecraft.wiki',
+	'fr.minecraft.wiki',
+	'hu.minecraft.wiki',
+	'id.minecraft.wiki',
+	'it.minecraft.wiki',
+	'ja.minecraft.wiki',
+	'ko.minecraft.wiki',
+	'lzh.minecraft.wiki',
+	'nl.minecraft.wiki',
+	'pl.minecraft.wiki',
+	'pt.minecraft.wiki',
+	'pt-br.minecraft.wiki',
+	'ru.minecraft.wiki',
+	'th.minecraft.wiki',
+	'tr.minecraft.wiki',
+	'uk.minecraft.wiki',
+	'zh.minecraft.wiki'
 )
 def is_rsw(environ):
 	try:
@@ -752,11 +838,12 @@ def is_rsw(environ):
 @r(r'^/track/navbox$', methods=['POST'])
 def route_track_navbox(env, resp):
 	if not is_rsw(env):
+		print(f'rejecting NAVBOX from referer {env.get("HTTP_REFERER")}')
 		resp('403 FORBIDDEN', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
 		return b'{"success":false, "reason": "wiki not allowed"}'
 	raw_data = env.get('wsgi.input').read()
 	try:
-		post_data = urlparse.parse_qs(raw_data)
+		post_data = parse_qs(raw_data.decode())
 		pagename = track_postdata_helper(post_data, 'page', 0)
 		navbox = track_postdata_helper(post_data, 'navbox', 0)
 		href = track_postdata_helper(post_data, 'link', 0)
@@ -765,51 +852,52 @@ def route_track_navbox(env, resp):
 		click_type = track_postdata_helper(post_data, 'click', 0)
 		t = time()
 		if wiki not in allowed_track_wikis:
+			print(f'rejecting NAVBOX from db {wiki}')
 			resp('403 FORBIDDEN', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
-			return b'{"success":false, "reason": "wiki not allowed"}'
+			return b'{"success":false, "reason": "wiki not allowed - w"}'
 		if pagename is None or navbox is None or href is None or link_type is None or click_type is None:
-			start_response('500 ERROR', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
-			return orjson.dumps({'sucess':False, 'raw_data':raw_data, 'parsed_data': post_data, 'reason': 'required field is none'})
+			print('failed NAVBOX', raw_data, post_data, pagename, navbox, href, wiki, link_type, click_type)
+			resp('500 ERROR', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
+			return orjson.dumps({'success':False, 'raw_data':str(raw_data), 'parsed_data': post_data, 'reason': 'required field is none'})
 		navbox_con.execute('INSERT INTO clicks (timestamp, page_name, navbox_name, link_href, link_type, click_type, wiki) VALUES (?, ?, ?, ?, ?, ?, ?)', (t, pagename, navbox, href, link_type, click_type, wiki))
 		navbox_con.commit()
 		resp('200 OK', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
-		#print('NAVBOX Added {} to sqlite'.format(raw_data))
 		return b'{"success":true}'
 
 	except Exception as e:
 		resp('500 ERROR', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
-		#print('NAVBOX failed on {}'.format(raw_data))
-		return orjson.dumps({'sucess':False, 'raw_data':raw_data, 'reason': str(e)})
+		return orjson.dumps({'success':False, 'raw_data':str(raw_data), 'reason': str(e)})
 	
 @r(r'^/track/sidebar$', methods=['POST'])
 def route_track_sidebar(env, resp):
 	if not is_rsw(env):
+		print(f'rejecting SIDEBAR from referer {env.get("HTTP_REFERER")}')
 		resp('403 FORBIDDEN', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
 		return b'{"success":false, "reason": "wiki not allowed"}'
-	raw_data = environ.get('wsgi.input').read()
+	raw_data = env.get('wsgi.input').read()
 	try:
-		post_data = urlparse.parse_qs(raw_data)
+		post_data = parse_qs(raw_data.decode())
 		pagename = track_postdata_helper(post_data, 'page', 0)
 		wiki = track_postdata_helper(post_data, 'wiki', 0)
 		href = track_postdata_helper(post_data, 'link', 0)
 		click_type = track_postdata_helper(post_data, 'click', 0)
 		t = time()
 		if wiki not in allowed_track_wikis:
+			print(f'rejecting SIDEBAR from db {wiki}')
 			resp('403 FORBIDDEN', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
 			return b'{"success":false, "reason": "wiki not allowed"}'
 		if pagename is None or wiki is None or href is None or click_type is None:
+			print('failed SIDEBAR', raw_data, post_data, pagename, wiki, href, click_type)
 			resp('500 ERROR', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
-			return orjson.dumps({'sucess':False, 'raw_data':raw_data, 'parsed_data': post_data, 'reason': 'required field is none'})
+			return orjson.dumps({'success':False, 'raw_data':str(raw_data), 'parsed_data': post_data, 'reason': 'required field is none'})
 		sidebar_con.execute('INSERT INTO clicks (timestamp, page_name, link_href, click_type, wiki) VALUES (?, ?, ?, ?, ?)', (t, pagename, href, click_type, wiki))
 		sidebar_con.commit()
-		start_response('200 OK', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
-		#print('SIDEBAR Added {} to sqlite'.format(raw_data))
+		resp('200 OK', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
 		return b'{"success":true}'
 
 	except Exception as e:
 		resp('500 ERROR', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
-		#print('SIDEBAR failed on {}, error {}'.format(raw_data, str(e)))
-		return orjson.dumps({'sucess':False, 'raw_data':raw_data, 'reason': str(e)})
+		return orjson.dumps({'success':False, 'raw_data':str(raw_data), 'reason': str(e)})
 
 
 @r(r'^/alt1/imgs/[A-Za-z ]+\.png$')
@@ -821,7 +909,7 @@ def route_alt1_imgs(env, resp):
 @r(r'^/alt1/contracts/data$', methods=['POST'])
 def route_alt1_submit(env, resp):
 	try:
-		body = json.loads(environ.get('wsgi.input').read())
+		body = json.loads(env.get('wsgi.input').read())
 		with open('/home/gaz/alt1stuff/constructioncontractsinfo.txt', 'a') as f:
 			f.write('\n{}\t{}\t{}'.format(time(), body.get('location', '@missing@'), ','.join(body.get('furniture', ['@missing@'])) ))
 			resp('200 OK', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
@@ -837,6 +925,7 @@ def route_pkmn_images(env, resp):
 	mime = 'image/png'
 	if imgpath[:-3] == 'jpg':
 		mime = 'image/jpeg'
+	#print('pkmn images', imgpath, mime)
 	for ch in serve_file(resp, imgpath, mime):
 		yield ch	
 
@@ -844,7 +933,16 @@ def route_pkmn_images(env, resp):
 def route_test(env, resp):
 	body = [ '%s: %s' %(k,v) for k,v in sorted(env.items()) ]
 	body.append('parsed_query_string: %s' % parse_qs(env.get('QUERY_STRING')))
+	if 'wsgi.input' in env:
+		try:
+			data = env.get('wsgi.input').read().decode()
+			body.append('\nData:')
+			body.append(data)
+			body.append(str(parse_qs(data)))
+		except:
+			body.append('failed to read any data')
 	body = '\n'.join(body)
 	body = f'<pre>{body}</pre>'
-	resp('200 OK', [('Content-Type', 'text/html')])
+	resp('200 OK', [('Content-Type', 'text/html'), ('Access-Control-Allow-Origin', '*')])
 	return body.encode('utf-8')
+

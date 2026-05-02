@@ -132,12 +132,12 @@ table > :not(tfoot) tr:nth-child(2) th {
 .mrdb-detail-dii img:hover {
   background-color: #bbbbbb;
 }
-.modelth,
-.modeltd {
+.mrdb-modelsth,
+.mrdb-modelstd {
   display: none;
 }
-.showmodel .modelth,
-.showmodel .modeltd {
+.showmodel .mrdb-modelsth,
+.showmodel .mrdb-modelstd {
   display: table-cell;
 }
 .mrdb-cell-combat {

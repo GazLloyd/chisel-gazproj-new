@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link rel='stylesheet' href='/gazproj/mrid.css'/>
+		<script>
+		const e = (t, params) => {
+				const el = document.createElement(t);
+				if (!(params===undefined)) {
+					if (params.text) {
+						el.textContent = params.text;
+					} else if (params.html) {
+						el.innerHTML = params.html;
+					}
+					if (params.class) {
+						el.className = params.class;
+					}
+					if (params.id) {
+						el.id = params.id;
+					}
+					if (params.attr) {
+						for (let [k,v] of Object.entries(params.attr)) {
+							el.setAttribute(k,v);
+						}
+					}
+					if (params.append) {
+						el.append(...params.append);
+					}
+				}
+				return el;
+			};
+		const addrow = (js) => {
+			const img = e('img', {attr:{src:js.src, height:js.height, width:js.width}});
+			const out = document.getElementById('out');
+			const row = e('tr', {
+				append: [
+					e('td', {text:js.id}),
+					e('td', {append:[img]})
+				]
+			});
+			out.append(row);
+		};
+		const dothething = () => {
+			const txt = document.getElementById('in');
+			const val = txt.value;
+			try {
+				const js = JSON.parse(val);
+				if (Array.isArray(js)) {
+					for (const j of js) {
+						addrow(j);
+					}
+				} else if (js.id===undefined || js.id===null) {
+					for (const j of Object.values(js)) {
+						addrow(j);
+					}
+				} else {
+					addrow(js);
+				}
+			} catch (e) {
+				addrow({id:'-', src: val});
+			}
+			txt.value = '';
+		};
+		const go = () => {
+			const sub = document.getElementById('sub');
+			sub.addEventListener('click', dothething);
+		};
+		document.addEventListener('DOMContentLoaded',go);
+	</script></head>
+	<body>
+		<textarea id="in"></textarea><button id="sub">submit</button>
+		<table>
+			<thead>
+				<tr>
+					<th>id</th>
+					<th>img</th>
+				</tr>
+			</thead>
+			<tbody id="out"></tbody>
+		</table>
+	</body>
+</html>

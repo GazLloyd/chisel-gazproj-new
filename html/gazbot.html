@@ -170,7 +170,7 @@
 			return s.join(', ');
 		};
 		const getData = async (wiki)=>{
-			let resp = await fetch('status_'+wiki);
+			let resp = await fetch('gazbot/status_'+wiki);
 			updatePage(await resp.json());
 		};
 		const refresh = async ()=>{

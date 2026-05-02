@@ -68,8 +68,8 @@ def main(cache, search, view):
 				line.append(str(o.get(a)))
 			f.write('\n')
 			f.write('\t'.join(line))
-	with open(f'/tools/gazproj/tabulatefiles/{outname}.json', 'w', encoding='utf-8') as f:
-		json.dump({"output":output, "order":order_of_args, 'filename': outname}, f)
+	with open(f'/tools/gazproj/tabulatefiles/{outname}.json', 'wb') as f:
+		f.write(orjson.dumps({"output":output, "order":order_of_args, 'filename': outname}, f))
 	return outname
 
 def run(args=sys.argv[1:]):

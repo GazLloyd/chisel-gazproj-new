@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+	<head>
+        <title>Pokémon Gold/Silver Box9 ACE</title>
+        <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+		<script>
+			const hexmap = {"00": "AA", "01": "AB", "02": "AC", "03": "AD", "04": "AE", "05": "AF", "06": "AG", "07": "AH", "08": "AI", "09": "AJ", "0A": "AK", "0B": "AL", "0C": "AM", "0D": "AN", "0E": "AO", "0F": "AP", "10": "AQ", "11": "AR", "12": "AS", "13": "AT", "14": "AU", "15": "AV", "16": "AW", "17": "AX", "18": "AY", "19": "AZ", "1A": "BZ", "1B": "CZ", "1C": "DZ", "1D": "EZ", "1E": "FZ", "1F": "GZ", "20": "HZ", "21": "IZ", "22": "JZ", "23": "KZ", "24": "LZ", "25": "MZ", "26": "NZ", "27": "OZ", "28": "PZ", "29": "QZ", "2A": "RZ", "2B": "SZ", "2C": "TZ", "2D": "UZ", "2E": "VZ", "2F": "WZ", "30": "XZ", "31": "YZ", "32": "ZZ", "33": "aT", "34": "aU", "35": "aV", "36": "aW", "37": "aX", "38": "aY", "39": "aZ", "3A": "bZ", "3B": "cZ", "3C": "dZ", "3D": "eZ", "3E": "fZ", "3F": "gZ", "40": "hZ", "41": "iZ", "42": "jZ", "43": "kZ", "44": "lZ", "45": "mZ", "46": "nZ", "47": "oZ", "48": "pZ", "49": "qZ", "4A": "rZ", "4B": "sZ", "4C": "tZ", "4D": "uZ", "4E": "vZ", "4F": "wZ", "50": "xZ", "51": "yZ", "52": "zZ", "53": "ta", "54": "ua", "55": "va", "56": "wa", "57": "xa", "58": "ya", "59": "za", "5A": "zb", "5B": "zc", "5C": "zd", "5D": "ze", "5E": "zf", "5F": "zg", "60": "zh", "61": "zi", "62": "zj", "63": "zk", "64": "zl", "65": "zm", "66": "zn", "67": "zo", "68": "zp", "69": "zq", "6A": "zr", "6B": "zs", "6C": "zt", "6D": "zu", "6E": "zv", "6F": "zw", "70": "zx", "71": "zy", "72": "zz", "73": "?N", "74": "?O", "75": "?P", "76": "?Q", "77": "?R", "78": "?S", "79": "?T", "7A": "?U", "7B": "?V", "7C": "?W", "7D": "?X", "7E": "?Y", "7F": "?Z", "80": "?(", "81": "?)", "82": "?:", "83": "?;", "84": "?[", "85": "?]", "86": "?a", "87": "?b", "88": "?c", "89": "?d", "8A": "?e", "8B": "?f", "8C": "?g", "8D": "?h", "8E": "?i", "8F": "?j", "90": "?k", "91": "?l", "92": "?m", "93": "?n", "94": "?o", "95": "?p", "96": "?q", "97": "?r", "98": "?s", "99": "?t", "9A": "?u", "9B": "?v", "9C": "?w", "9D": "?x", "9E": "?y", "9F": "?z", "A0": "9b", "A1": "9c", "A2": "9d", "A3": "9e", "A4": "9f", "A5": "9g", "A6": "9h", "A7": "9i", "A8": "9j", "A9": "9k", "AA": "9l", "AB": "9m", "AC": "9n", "AD": "9o", "AE": "9p", "AF": "9q", "B0": "9r", "B1": "9s", "B2": "9t", "B3": "9u", "B4": "9v", "B5": "9w", "B6": "9x", "B7": "9y", "B8": "9z", "B9": "'r?", "BA": "'s?", "BB": "'t?", "BC": "'v?", "BD": "'v!", "BE": "'v.", "BF": "'v&", "C0": "'vé", "C1": "'m♂", "C2": "'r♂", "C3": "'s♂", "C4": "'t♂", "C5": "'v♂", "C6": "'d0", "C7": "'d1", "C8": "'d2", "C9": "'d3", "CA": "'d4", "CB": "'d5", "CC": "'d6", "CD": "'d7", "CE": "'d8", "CF": "'d9", "D0": "'l9", "D1": "'m9", "D2": "'r9", "D3": "'s9", "D4": "'t9", "D5": "'v9", "D6": "!♂", "D7": ".♂", "D8": "&♂", "D9": "é♂", "DA": "!/", "DB": "./", "DC": "&/", "DD": "é/", "DE": ".0", "DF": ".1", "E0": ".2", "E1": ".3", "E2": ".4", "E3": ".5", "E4": ".6", "E5": ".7", "E6": ".8", "E7": ".9", "E8": "&9", "E9": "/0", "EA": "/1", "EB": "/2", "EC": "00", "ED": "01", "EE": "02", "EF": "03", "F0": "04", "F1": "05", "F2": "06", "F3": "07", "F4": "08", "F5": "09", "F6": "19", "F7": "29", "F8": "39", "F9": "49", "FA": "59", "FB": "69", "FC": "79", "FD": "89", "FE": "99", "FF": "_A"};
+			function makeOut() {
+				console.log('making out')
+				let val = $('#txt-inp').val();
+				val = val.replaceAll(' ','').trim().toUpperCase();
+				if (val.length % 2 !== 0) {
+					console.log('not multiple of 2')
+					$('#output-txt').text('');
+					return;
+				}
+				let out = '';
+				for (let i = 0; i<val.length; i+=2) {
+					let v = val.substring(i, i+2);
+					let h = hexmap[v];
+					if (!h) {
+						console.log(`${v} not in hexmap`)
+						$('#output-txt').text('');
+						return;
+					}
+					out += h;
+				}
+				$('#output-txt').text(out);
+			}
+			function makeOut2() {
+				let val = $('#txt-inp2').val();
+				val = val.trim();
+				let out = '';
+				let num = parseInt(val).toString(16).toUpperCase();
+				if (num.length === 1) num='0'+num;
+				let h = hexmap[num];
+				if (!h) {
+					$('#output-txt2').text('');
+					return;
+				}
+				$('#output-txt2').text(`!/RZ${h}`);
+			}
+			function init() {
+				$('#txt-inp').on('change keyup enter', makeOut);
+				$('#txt-inp2').on('change keyup enter', makeOut2);
+				console.log('ready');
+			}
+			$(init);
+		</script>
+		<style>
+			table, tr, td, th {
+				border: 1px black solid;
+				border-collapse: collapse;
+			}
+			th,td {
+				padding: 0.5em;
+			}
+			#helpfulcodes table tbody td:nth-child(2) {
+				font-family: monospace;
+			}
+			.code {
+				font-family: monospace;
+				border: 1px outset black;
+			}
+			body {
+				filter:invert(1);
+				background-color: black;
+			}
+			.mabove {
+				margin-top: 1em;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Pokémon Gold/Silver Arbitrary Code Execution via Box9</h1>
+		<div>For details, see <a href="https://www.reddit.com/r/pokemon/comments/4a6abq/guide_getting_any_pok%C3%A9mon_you_want_in_gold_silver/">here</a>.<br><a href="https://datacrystal.romhacking.net/wiki/Pok%c3%a9mon_Gold_and_Silver:RAM_map#Pokemon_1_Settings">RAM map</a>.</div>
+		<div id="pkmn1" class="mabove">
+			Generalised RAM address editing<br>
+			<label for="txt-inp">RAM alteration in hex</label><input type="text" name="txt-inp" id="txt-inp" />
+			<div id="output">BOX9 name: <span class="code" id="output-txt"></span></div>
+		</div>
+		<div id="pkmn2" class="mabove">
+			Change the party slot 1 pokémon to another species<br>
+			<label for="txt-inp2">Pokémon number for party slot 1</label><input type="number" name="txt-inp2" id="txt-inp2" />
+			<div id="output2">Box name: <span class="code" id="output-txt2"></span></div>
+		</div>
+		<div id="helpfulcodes" class="mabove">
+			Some other useful codes<br>
+			With multiple names, use each one in order
+			<table>
+				<thead>
+					<tr><th>Effect</th><th>BOX9 name(s)</th><th>RAM hexes</th><th>Notes</th></tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>Shiny first Pokémon (always male except female-only species)</td>
+						<td>!/gZ59<br>!/hZ9l</td>
+						<td>DA3F FA<br>DA40 AA</td>
+						<td>Female-only species: Nidoran♀ line, Chansey line, Kangaskhan, Smoochum line, Miltank<br>Male-only species: Nidoran♂ line, Tyrogue line, Tauros</td>
+					</tr>
+					<tr>
+						<td>Shiny female first Pokémon in 50% m:50% f species</td>
+						<td>!/gZ?U<br>!/hZ9l</td>
+						<td>DA3F 7A<br>DA40 AA</td>
+						<td>1:1 ratio (50% m: 50% f) species with gender differences in later generations: 12 Butterfree, 19 Rattata, 20 Raticate, 25 Pikachu, 26 Raichu, 41 Zubat, 42 Golbat, 44 Gloom, 45 Vileplume, 84 Doduo, 85 Dodrio, 97 Hypno, 111 Rhyhorn, 112 Rhydon, 118 Goldeen, 119 Seaking, 123 Scyther, 129 Magikarp, 130 Gyarados, 165 Ledyba, 166 Ledian, 178 Xatu, 185 Sudowoodo, 186 Politoed, 190 Aipom, 194 Wooper, 195 Quagsire, 198 Murkrow, 202 Wobbuffet, 203 Girafarig, 207 Gligar, 208 Steelix, 212 Scizor, 214 Heracross, 215 Sneasel, 217 Ursaring, 221 Piloswine, 224 Octillery, 229 Houndoom, 232 Donphan. (Future evolutions: Rhyperior, Tangrowth, Ambipom, Weavile, Mamoswine)</td>
+					</tr>
+					<tr>
+						<td>Shiny female first Pokémon in 75% m:25% f species</td>
+						<td>!/gZbZ<br>!/hZ9l</td>
+						<td>DA3F 3A<br>DA40 AA</td>
+						<td>3:1 ratio (75% m: 25% f) species with gender differences in later generations: Kadabra, Alakazam</td>
+					</tr>
+					<tr>
+						<td>Shiny female first Pokémon in 25% m:75% f species</td>
+						<td rowspan="2">!/gZ's?<br>!/hZ9l</td>
+						<td rowspan="2">DA3F BA<br>DA40 AA</td>
+						<td>1:3 ratio (25% m: 75% f) species with gender differences in later generations: none. This is provided just in case. Also note, there are no generation 1-2 Pokémon with a 1m:7f gender ratio.</td>
+					</tr>
+					<tr>
+						<td>Shiny Unown I</td>
+						<td>Again, Unown letter is determined by IVs. As the other IVs are 10s, an Attack IV of 6,7,14,15 is Unown V, and 2,3,10,11 are Unown I. Other letters cannot be shiny. (Use the first BOX9 name for shiny V.)</td>
+					</tr>
+					<tr>
+						<td>Shiny female first Pokémon in 87.5% m:12.5% f species</td>
+						<td>Impossible<sup>[5]</sup></td>
+						<td>This is impossible due to shininess and gender both being set by Attack IVs. Shiny Pokémon have 10 Defense, Speed, and Special, and 2,3,6,7,10,11,14,15 Attack IVs; female Pokémon have an Attack IV at or below the gender ratio. 7m:1f ratio means the Attack IV for a female can only be 0 or 1, which is not a shiny IV.<br>7:1 ratio (87.5% m: 12.5% f) species with gender differences in later generations: Venusaur, Eevee, Meganium; thus these three and their lines cannot be made shiny females in this generation.</td>
+					</tr>
+					<tr>
+						<td>Set first Pokémon's first move to hidden power<sup>[7]</sup></td>
+						<td>!/TZ01</td>
+						<td>DA2C ED</td>
+						<td>If you decide to use your cloned Pokémon for Unown instead of catching one and making it shiny.</td>
+					</tr>
+					<tr>
+						<td rowspan="3">Make Mew legal (first Pokémon)</td>
+						<td>!/XZza<br>!/YZAM</td>
+						<td>DA30 59<br>DA31 0C</td>
+						<td>Mew can only be transported if it has ID 22796 and OT GF. These two codes sets the ID.</td>
+					</tr>
+					<tr>
+						<td>./rZ?a<br>./sZ?]<br>./tZxZ</td>
+						<td>DB4A 86<br>DB4B 85<br>DB4C 7F</td>
+						<td>These three codes set the OT.</td>
+					</tr>
+					<tr>
+						<td>./uZxZ<br>./vZxZ<br>./wZxZ<br>./xZxZ<br>./yZxZ<br>./zZxZ<br>./taxZ<br>./uaxZ</td>
+						<td>DB4D 7F<br>DB4E 7F<br>DB4F 7F<br>DB50 7F<br>DB51 7F<br>DB52 7F<br>DB53 7F<br>DB54 7F<br></td>
+						<td>My trainer name was just 'Gaz'; I didn't test with a longer name. If necessary, use these to erase the rest of your name if the above 3 are not enough.</td>
+					</tr>
+					<tr>
+						<td>Set first Pokémon to level 0</td>
+						<td>/!qZAA</td>
+						<td>DA49 00</td>
+						<td>Use a rare candy to level it up to level 1 and re-learn default moves. You can then level it to whatever other level by changing the 00 and using the above box, or more rare candies.</td>
+					</tr>
+					<tr>
+						<td>Unlock all fly points</td>
+						<td>é♂02_A<br>é♂03_A<br>é♂04_A<br>é♂05_A</td>
+						<td>D9EE FF<br>D9EF FF<br>D9F0FF<br>D9F1 FF</td>
+						<td>This allows you to fly to all cities, including Kanto.</td>
+					</tr>
+					<tr>
+						<td>All Johto Badges</td>
+						<td>'v9?W_A</td>
+						<td>D57C FF</td>
+						<td>Sets all Johto badges to obtained, allowing HM use and such.</td>
+					</tr>
+					<tr>
+						<td>All Kanto Badges</td>
+						<td>'v9?X_A</td>
+						<td>D57D FF</td>
+						<td>If you feel like it.</td>
+					</tr>
+				</tbody>
+			</table>
+			<b>Notes</b>
+			<ol>
+				<li>Female-only species: Nidoran♀ line, Chansey line, Kangaskhan, Smoochum line, Miltank<br>Male-only species: Nidoran♂ line, Tyrogue line, Tauros</li>
+				<li>1:1 ratio (50% m: 50% f) species with gender differences in later generations: 12 Butterfree, 19 Rattata, 20 Raticate, 25 Pikachu, 26 Raichu, 41 Zubat, 42 Golbat, 44 Gloom, 45 Vileplume, 84 Doduo, 85 Dodrio, 97 Hypno, 111 Rhyhorn, 112 Rhydon, 118 Goldeen, 119 Seaking, 123 Scyther, 129 Magikarp, 130 Gyarados, 165 Ledyba, 166 Ledian, 178 Xatu, 185 Sudowoodo, 186 Politoed, 190 Aipom, 194 Wooper, 195 Quagsire, 198 Murkrow, 202 Wobbuffet, 203 Girafarig, 207 Gligar, 208 Steelix, 212 Scizor, 214 Heracross, 215 Sneasel, 217 Ursaring, 221 Piloswine, 224 Octillery, 229 Houndoom, 232 Donphan. (Future evolutions: Rhyperior, Tangrowth, Ambipom, Weavile, Mamoswine)</li>
+				<li>3:1 ratio (75% m: 25% f) species with gender differences in later generations: Kadabra, Alakazam</li>
+				<li>1:3 ratio (25% m: 75% f) species with gender differences in later generations: none. This is provided just in case. Also note, there are no generation 1-2 Pokémon with a 1m:7f gender ratio.</li>
+				<li>This is impossible due to shininess and gender both being set by Attack IVs. Shiny Pokémon have 10 Defense, Speed, and Special, and 2,3,6,7,10,11,14,15 Attack IVs; female Pokémon have an Attack IV at or below the gender ratio. 7m:1f ratio means the Attack IV for a female can only be 0 or 1, which is not a shiny IV.<br>7:1 ratio (87.5% m: 12.5% f) species with gender differences in later generations: Venusaur, Eevee, Meganium; thus these three and their lines cannot be made shiny females in this generation.</li>
+				<li>Again, Unown letter is determined by IVs. As the other IVs are 10s, an Attack IV of 6,7,14,15 is Unown V, and 2,3,10,11 are Unown I. Other letters cannot be shiny. (Use the first BOX9 name for shiny V.)</li>
+			</ol>
+		</div>
+	</body>
+</html>
