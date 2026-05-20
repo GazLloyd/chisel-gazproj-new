@@ -250,7 +250,7 @@ def reloadRSCache():
 		if type(v) == dict:
 			rscache_data['items'].get(v['item_id'], {})['examine'] = v['desc']
 	makeDiffHtmls()
-	#infobox.load_configs()
+	#infobox.reload(rscache_data)
 
 # generator to read a file in chunks, reduce memory overhead of reading a file
 # (file handle)*=>bytes
@@ -363,7 +363,7 @@ def formatMRDB_items(vals):
 			unnoted = get_unnoted_item(cache)
 			if unnoted is not None:
 				ret['noted'] = True
-				ret['name'] = get_item_name(unnoted.get('cache'), '@unknown@')
+				ret['name'] = get_item_name(unnoted, '@unknown@')
 		
 		if extra is not None:
 			for i in range(1,11):
@@ -448,6 +448,7 @@ MRDB_RXS = {
 	'recent': recomp(r'recent(\d+)', IGNORECASE),
 	'enum': recomp(r'enum(\d+)', IGNORECASE)
 }
+MRDB_FULL = ['items', 'npcs', 'locations', 'structs', 'dbrows', 'enums', 'achievements', 'quests']
 @r(r'^/mrdb/get$')
 def route_mrdb_get(env,resp):
 	global rscache_data, rscache_maxids
@@ -523,6 +524,49 @@ def route_mrdb_get(env,resp):
 	
 	resp('200 OK', [('Content-Type', 'application/json')])
 	return orjson.dumps(out)
+
+# mrdb getfull
+# fetches the full cache JSON of one or more things
+# fetching db=items/npcs inserts the alog/bestiary for that id too
+@r(r'^/mrdb/getfull$')
+def route_mrdb_getfull(env,resp):
+	global rscache_data
+	qs = parse_qs(env.get('QUERY_STRING',''))
+	qs_db = qs.get('db')
+	if (not type(qs_db) == list) or len(qs_db) == 0:
+		resp('400 ERROR', [('Content-Type', 'application/json')])
+		return b'{"error":"invalid mrdb provided"}'
+	qs_db = qs_db[0]
+	if qs_db not in MRDB_FULL:
+		resp('400 ERROR', [('Content-Type', 'application/json')])
+		return b'{"error":"invalid mrdb provided"}'
+	ids = qs.get('id', [])
+	if len(ids) < 1:
+		resp('400 ERROR', [('Content-Type', 'application/json')])
+		return b'{"error":"no query provided"}'
+	db = rscache_data[qs_db]
+	out = {}
+	errs = []
+	for istr in ids:
+		try:
+			i = int(istr)
+		except ValueError:
+			errs.append(f'id not an int: {istr}')
+			continue
+		val = db.get(i)
+		if val is not None:
+			if qs_db == 'items':
+				val = val.copy()
+				val['__alog'] = rscache_data['alog'].get(i)
+			elif qs_db == 'npcs':
+				val = val.copy()
+				val['__bestiary'] = rscache_data['bestiary'].get(i)
+		out[str(i)] = val
+	if len(errs)>0:
+		out['errors'] = errs
+	resp('200 OK', [('Content-Type', 'application/json')])
+	return orjson.dumps(out)
+
 
 # mr[ion]d/detail body - this part is standard
 # (str body, str title, int id, str name) => str
